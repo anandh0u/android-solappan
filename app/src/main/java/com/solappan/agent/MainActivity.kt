@@ -8,13 +8,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,6 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.solappan.agent.tools.ToolConfirmation
 import com.solappan.agent.tools.ToolRegistry
 import kotlinx.coroutines.CompletableDeferred
@@ -46,12 +55,29 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) { AgentScreen() }
+            MaterialTheme(colorScheme = SolappanColors) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    AgentScreen()
+                }
             }
         }
     }
 }
+
+private val SolappanColors = darkColorScheme(
+    primary = Color(0xFFFF9B54),
+    onPrimary = Color(0xFF21110B),
+    primaryContainer = Color(0xFF4A2630),
+    onPrimaryContainer = Color(0xFFFFD8C2),
+    secondary = Color(0xFFE66BCB),
+    background = Color(0xFF100D1A),
+    surface = Color(0xFF1A1527),
+    surfaceVariant = Color(0xFF251E35),
+    onSurface = Color(0xFFF3EEF7),
+    onSurfaceVariant = Color(0xFFB7AEC3),
+    outline = Color(0xFF5E536B),
+    error = Color(0xFFFF716A),
+)
 
 private enum class TimelineStatus { RUNNING, SUCCESS, FAILED, CANCELLED }
 
@@ -96,11 +122,20 @@ private fun AgentScreen() {
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("Solappan Agent", style = MaterialTheme.typography.headlineMedium)
-        Text("Turn a goal into safe Android actions.", style = MaterialTheme.typography.bodyLarge)
+        Header()
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatusPill("● Model ready", BuildConfig.OPENAI_API_KEY.isNotBlank())
+            StatusPill("● Contacts", contactsGranted)
+        }
 
         StateCard(agentState)
 
@@ -117,9 +152,14 @@ private fun AgentScreen() {
         }
 
         if (!contactsGranted) {
-            Button(onClick = { contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }) {
+            OutlinedButton(onClick = { contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }) {
                 Text("Enable contact tools")
             }
+        }
+
+        if (!loading && goal.isBlank() && agentState == AgentState.IDLE) {
+            Text("Try a workflow", style = MaterialTheme.typography.titleMedium)
+            DemoPrompts(onSelect = { goal = it })
         }
 
         OutlinedTextField(
@@ -127,12 +167,14 @@ private fun AgentScreen() {
             onValueChange = { goal = it },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("What do you want to accomplish?") },
+            placeholder = { Text("Describe the outcome — the agent handles the steps") },
             minLines = 3,
             enabled = !loading,
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
+                modifier = Modifier.weight(1f),
                 enabled = !loading && goal.isNotBlank(),
                 onClick = {
                     loading = true
@@ -188,7 +230,7 @@ private fun AgentScreen() {
                         loading = false
                     }
                 },
-            ) { Text("Run goal") }
+            ) { Text(if (loading) "Running…" else "Run workflow") }
 
             if (!loading && agentState != AgentState.IDLE) {
                 OutlinedButton(onClick = ::reset) { Text("Reset") }
@@ -214,7 +256,21 @@ private fun AgentScreen() {
                     TimelineStatus.FAILED -> "!"
                     TimelineStatus.CANCELLED -> "×"
                 }
-                Text("$marker ${entry.toolName}: ${entry.message}")
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(marker, color = timelineColor(entry.status), style = MaterialTheme.typography.titleMedium)
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(entry.toolName.replace('_', ' '), style = MaterialTheme.typography.titleSmall)
+                            Text(entry.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
         }
 
@@ -230,16 +286,95 @@ private fun AgentScreen() {
 }
 
 @Composable
+private fun Header() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Card(
+            modifier = Modifier.size(54.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+            shape = RoundedCornerShape(17.dp),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("✦", color = MaterialTheme.colorScheme.onPrimary, fontSize = 28.sp)
+            }
+        }
+        Column {
+            Text("SOLAPPAN  /  LOCAL AGENT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text("Android Agent Runtime", style = MaterialTheme.typography.headlineSmall)
+            Text("TRACK 04 · PRODUCTIVITY + AUTOMATION", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun StatusPill(label: String, active: Boolean) {
+    Surface(
+        color = if (active) Color(0xFF17342F) else Color(0xFF3B2028),
+        shape = RoundedCornerShape(50),
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+            color = if (active) Color(0xFF75D8B7) else MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.labelMedium,
+        )
+    }
+}
+
+@Composable
+private fun DemoPrompts(onSelect: (String) -> Unit) {
+    val prompts = listOf(
+        "Open Spotify.",
+        "Set an alarm for 7 AM tomorrow and navigate to GEC Thrissur.",
+        "Find Afnan, prepare a message saying I will reach 20 minutes late, and open Maps to GEC Thrissur.",
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        prompts.forEachIndexed { index, prompt ->
+            AssistChip(
+                onClick = { onSelect(prompt) },
+                label = { Text("${index + 1}. $prompt") },
+            )
+        }
+    }
+}
+
+private fun timelineColor(status: TimelineStatus): Color = when (status) {
+    TimelineStatus.RUNNING -> Color(0xFFFF9B54)
+    TimelineStatus.SUCCESS -> Color(0xFF75D8B7)
+    TimelineStatus.FAILED, TimelineStatus.CANCELLED -> Color(0xFFFF716A)
+}
+
+@Composable
 private fun StateCard(state: AgentState) {
     val color = when (state) {
-        AgentState.COMPLETED -> Color(0xFF137333)
+        AgentState.COMPLETED -> Color(0xFF75D8B7)
         AgentState.FAILED, AgentState.CANCELLED -> MaterialTheme.colorScheme.error
-        AgentState.WAITING_FOR_CONFIRMATION -> Color(0xFF9A6700)
+        AgentState.WAITING_FOR_CONFIRMATION -> Color(0xFFFFB86B)
         else -> MaterialTheme.colorScheme.primary
     }
     Card(colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.10f))) {
-        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text("Agent state", style = MaterialTheme.typography.labelMedium)
+        Column(
+            Modifier.fillMaxWidth().padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.size(72.dp),
+                    color = color.copy(alpha = 0.13f),
+                    shape = CircleShape,
+                ) {}
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    color = color.copy(alpha = 0.28f),
+                    shape = CircleShape,
+                ) {}
+                Surface(
+                    modifier = Modifier.size(28.dp),
+                    color = color,
+                    shape = CircleShape,
+                ) {}
+            }
+            Text("AGENT STATE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(stateLabel(state), color = color, style = MaterialTheme.typography.titleMedium)
         }
     }
@@ -251,14 +386,14 @@ private fun ConfirmationCard(
     onCancel: () -> Unit,
     onApprove: () -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD))) {
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF35251E))) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Approval required", style = MaterialTheme.typography.titleMedium)
+            Text("Approval required", style = MaterialTheme.typography.titleLarge)
             Text(request.summary)
             Text("Risk: ${request.riskLevel.name}", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = onCancel) { Text("Cancel") }
-                Button(onClick = onApprove) { Text("Approve") }
+                OutlinedButton(modifier = Modifier.weight(1f), onClick = onCancel) { Text("Cancel") }
+                Button(modifier = Modifier.weight(1f), onClick = onApprove) { Text("Approve action") }
             }
         }
     }
