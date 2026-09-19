@@ -427,11 +427,11 @@ Accessibility remains optional, exposes only bounded registered actions, cannot 
 
 Actual:
 
-The APK now registers an optional accessibility service and six tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home`. Cross-process commands use signature-protected package broadcasts. Observations exclude SOL windows and password values and are bounded to 80 nodes. Tap/type require normal runtime confirmation; the service also blocks consequential labels. Native tools remain preferred in model instructions. Build, 20 unit tests, lint, installation, manifest registration, and setup UI passed. The service remains disabled until the user grants Android Settings consent, so live observe/action verification is still OPEN.
+The APK now registers an optional accessibility service and six tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home`. Cross-process commands use signature-protected package broadcasts. Observations exclude SOL windows and password values and are bounded to 80 nodes. Tap/type require normal runtime confirmation; the service also blocks consequential labels. Native tools remain preferred in model instructions. Build, 20 unit tests, lint, installation, manifest registration, and setup UI passed. After user enablement, one physical-phone workflow opened Settings, observed `com.android.settings`, scrolled semantically, observed again, pressed Back, and pressed Home. The setup status now refreshes when the activity resumes. Live tap/type validation remains OPEN.
 
 Status:
 
-WORKING — implemented and installed; awaiting manual enablement and physical-device action tests.
+WORKING — observe/scroll/Back/Home passed on-device; tap/type confirmation tests remain.
 
 ## Blocking Rule
 
