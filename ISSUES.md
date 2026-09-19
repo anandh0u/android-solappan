@@ -449,11 +449,11 @@ A registered deterministic tool opens Spotify search for a user-provided query w
 
 Actual:
 
-`search_music(query, provider="spotify")` uses Spotify's native search URI with a browser fallback. The schema rejects other providers and extra arguments. Model instructions keep search and playback/verification distinct. Build, tests, lint, and installation pass; physical-device result-page validation remains OPEN.
+`search_music(query, provider="spotify")` uses Spotify's native search URI with a browser fallback. The schema rejects other providers and extra arguments. Model instructions keep search and playback/verification distinct. Build, tests, lint, and installation pass. A physical-device request for Starboy opened Spotify and the visible Spotify screen title showed `Starboy`; no autoplay claim was made.
 
 Status:
 
-WORKING — implemented and installed; live Spotify result validation pending.
+COMPLETE — Spotify query routing and visible result-page validation passed on-device.
 
 ## Blocking Rule
 
