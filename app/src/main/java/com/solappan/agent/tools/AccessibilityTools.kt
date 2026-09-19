@@ -82,7 +82,7 @@ private class AccessibilityCommandClient(private val context: Context) {
             check(lease.createNewFile())
             context.sendBroadcast(intent, AccessibilityProtocol.PERMISSION)
             if (!latch.await(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                return ToolResult.failure("The accessibility service did not respond in time.", "ACCESSIBILITY_TIMEOUT")
+                return ToolResult.failure("Android lists SOL screen control as enabled, but its service did not respond. After an app update or service crash, turn SOL screen control off and back on in Android Accessibility Settings, then retry. No result was confirmed.", "ACCESSIBILITY_TIMEOUT")
             }
             return result ?: ToolResult.failure("The accessibility service returned no result.", "ACCESSIBILITY_ACTION_FAILED")
         } catch (interrupted: InterruptedException) {
@@ -164,6 +164,23 @@ internal class ScrollScreenTool(context: Context) : AgentTool {
         "scroll",
         mapOf(AccessibilityProtocol.EXTRA_DIRECTION to arguments.getString("direction")),
     )
+}
+
+internal class SendMessageTool(context: Context) : AgentTool {
+    private val client = AccessibilityCommandClient(context)
+    override val name = "send_message"
+    override val description = "EXPERIMENTAL: send the exact draft already visible in a messaging app, after explicit user approval. Observe first. Requires exact recipient text above the draft, exact draft message, observed app package and an English-labelled Send button. Never retry an uncertain send; observe afterward. Does not prove delivery."
+    override val parameters = JSONObject("""{"type":"object","properties":{"package":{"type":"string"},"recipient":{"type":"string"},"message":{"type":"string"},"target":{"type":"string"}},"required":["package","recipient","message","target"],"additionalProperties":false}""")
+    override val riskLevel = RiskLevel.MEDIUM
+    override val requiresConfirmation = true
+    override fun confirmationSummary(arguments: JSONObject): String =
+        "SEND a real message in ${arguments.optString("package")}\nRecipient: ${arguments.optString("recipient")}\nMessage: ${arguments.optString("message")}\nReview the actual conversation before approving. This cannot be undone."
+    override fun execute(arguments: JSONObject): ToolResult = client.execute("send_message", mapOf(
+        AccessibilityProtocol.EXTRA_TARGET to arguments.getString("target"),
+        AccessibilityProtocol.EXTRA_TEXT to arguments.getString("message"),
+        "expected_package" to arguments.getString("package"),
+        "expected_recipient" to arguments.getString("recipient"),
+    ))
 }
 
 internal class PressNavigationTool(

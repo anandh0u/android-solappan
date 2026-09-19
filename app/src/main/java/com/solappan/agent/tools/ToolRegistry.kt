@@ -98,8 +98,8 @@ class ToolRegistry(tools: List<AgentTool>) {
 
         fun sessionThree(context: Context): ToolRegistry = ToolRegistry(
             listOf(
-                EchoTool(),
                 OpenAppTool(context),
+                ListAppsTool(context),
                 OpenMapsTool(context),
                 SetAlarmTool(context),
                 FindContactTool(context),
@@ -110,6 +110,7 @@ class ToolRegistry(tools: List<AgentTool>) {
                 ObserveScreenTool(context),
                 TapElementTool(context),
                 TypeTextTool(context),
+                SendMessageTool(context),
                 ScrollScreenTool(context),
                 PressNavigationTool(context, "press_back", "back", "Back"),
                 PressNavigationTool(context, "press_home", "home", "Home"),

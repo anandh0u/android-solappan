@@ -1,5 +1,5 @@
 import {handleRequest} from './index.ts';
-const env=(name:string)=>({SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'test-service',OPENAI_API_KEY:'test-provider'}[name]);
+const env=(name:string)=>({SUPABASE_URL:'https://test.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'test-service',OPENAI_API_KEY:'test-provider',OPENAI_MODEL:'test-model'}[name]);
 const user={id:'00000000-0000-0000-0000-000000000001',email_confirmed_at:'2026-01-01'};
 const request=(extra={},auth='Bearer test-token')=>new Request('https://test.supabase.co/functions/v1/agent-gateway',{
  method:'POST',headers:{Authorization:auth},body:JSON.stringify({input:'Hello',instructions:'Use tools',tools:[],...extra})});

@@ -1,14 +1,15 @@
 export const MAX_BYTES = 2_000_000;
-const names = new Set(['open_app','open_maps','set_alarm','find_contact','call_contact','prepare_sms',
+const names = new Set(['send_message','list_apps','open_app','open_maps','set_alarm','find_contact','call_contact','prepare_sms',
   'search_music','control_media','observe_screen','tap_element','type_text','scroll_screen','press_back','press_home']);
-export function validateRequest(value: unknown): Record<string, unknown> {
+export function validateRequest(value: unknown, model: string): Record<string, unknown> {
+  if (!model || !/^[a-zA-Z0-9._:-]{1,100}$/.test(model)) throw Error('Invalid server model configuration');
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Invalid request');
   const body = value as Record<string, unknown>;
   const allowed = new Set(['input','tools','instructions','previous_response_id','model','parallel_tool_calls','reasoning','max_output_tokens']);
   if (Object.keys(body).some(k => !allowed.has(k))) throw Error('Unsupported request field');
   if (!(typeof body.input === 'string' || Array.isArray(body.input)) || JSON.stringify(body.input).length > 1_900_000) throw Error('Invalid input');
   if (typeof body.instructions !== 'string' || body.instructions.length > 12_000) throw Error('Invalid instructions');
-  if (!Array.isArray(body.tools) || body.tools.length > 14 || JSON.stringify(body.tools).length > 30_000) throw Error('Invalid tools');
+  if (!Array.isArray(body.tools) || body.tools.length > names.size || JSON.stringify(body.tools).length > 30_000) throw Error('Invalid tools');
   const seen = new Set();
   for (const tool of body.tools) {
     if (!tool || tool.type !== 'function' || !names.has(tool.name) || seen.has(tool.name) ||
@@ -20,7 +21,7 @@ export function validateRequest(value: unknown): Record<string, unknown> {
   // Clients cannot choose price tier, token budget, hosted tools, endpoint or execution mode.
   return {input:body.input, tools:body.tools, instructions:body.instructions,
     ...(body.previous_response_id ? {previous_response_id:body.previous_response_id} : {}),
-    model:'gpt-6-astra', reasoning:{effort:'low'}, max_output_tokens:4096,
+    model, reasoning:{effort:'low'}, max_output_tokens:4096,
     parallel_tool_calls:false, store:true};
 }
 

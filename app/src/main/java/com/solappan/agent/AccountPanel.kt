@@ -42,11 +42,23 @@ internal fun AccountPanel() {
                 password = ""
                 scope.launch {
                     val result = withContext(Dispatchers.IO) { runCatching { session.signIn(email, suppliedPassword); session.accountEmail() } }
-                    result.onSuccess { account = it; message = "Signed in. Gateway deployment and beta access are still required." }
+                    result.onSuccess { account = it; message = "Signed in. Your account must also be enabled for beta access." }
                         .onFailure { message = it.message ?: "Sign-in failed safely." }
                     busy = false
                 }
             }) { Text(if (busy) "Signing in…" else "Sign in") }
+            OutlinedButton(enabled = !busy && email.isNotBlank() && password.length >= 12, onClick = {
+                busy = true
+                val suppliedEmail = email
+                val suppliedPassword = password
+                password = ""
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) { runCatching { session.signUp(suppliedEmail, suppliedPassword) } }
+                    message = if (result.isSuccess) "Check your email for verification, then sign in. The project owner must enable beta access."
+                        else "Account creation failed. Check the address, password requirements and network, or try signing in."
+                    busy = false
+                }
+            }) { Text("Create beta account") }
         } else {
             Text("Signed in: $account")
             OutlinedButton(enabled = !busy, onClick = {

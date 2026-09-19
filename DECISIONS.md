@@ -1,5 +1,13 @@
 # Architecture Decision Log
 
+## ADR-031 — Dynamic app discovery and confirmed message sending
+
+Remove app-package shortcut tables and Spotify-only routing. Resolve real installed labels and expose list_apps; use the standard media search/play intent or observed UI when unsupported. Server model selection moves to OPENAI_MODEL, while safety caps and registered capabilities remain enforced. Remove echo from the phone registry to match gateway policy.
+
+The dedicated experimental send_message tool, unlike generic tapping, may dispatch Send after explicit approval. It requires a fresh unchanged observed package, exact draft, unique visible recipient above that draft, and an English-labelled Send button. It is one-shot and never retries uncertainty. This is deliberately limited UI evidence, not universal semantic safety, verified recipient identity or delivery assurance. Lock-screen screen actions are rejected. Cross-app qualification and adversarial evaluation remain open.
+
+Supabase migration/function/secrets are now deployed, with live access-control and continuation smoke evidence. The current local build uses gateway mode with no embedded provider key; user onboarding and owner beta approval are required before phone reasoning.
+
 ## ADR-030 — Authenticated private-beta gateway
 
 Release builds always route through Supabase and exclude the developer OpenAI credential. Debug direct mode remains available only to preserve the private demo until deployment. Email/password Auth sessions are AES-GCM encrypted with Android Keystore in no-backup storage, with a cross-process refresh lock; passwords are not persisted. The Edge Function independently verifies Auth tokens, requires verified allowlisted users, fixes model cost parameters and validates continuation ownership. SQL security-definer quota reservation uses a transaction advisory lock for small-beta throughput, with service-role-only execution. This is a private-beta design, not a public scale or privacy certification. Hosted deployment and device account validation remain release gates.

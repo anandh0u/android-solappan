@@ -9,6 +9,8 @@ import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.ContactsContract
 import android.provider.Telephony
+import android.provider.MediaStore
+import android.app.SearchManager
 import android.view.KeyEvent
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,21 +45,15 @@ internal class OpenAppTool(context: Context) : ContextTool(context) {
         val appName = requiredString(arguments, "appName") ?: return invalid("appName")
         val packageManager = context.packageManager
         val normalized = appName.lowercase(Locale.ROOT).trim()
-        val knownPackage = KNOWN_APPS[normalized]
-        val knownIntent = knownPackage?.let(packageManager::getLaunchIntentForPackage)
-        val candidates = if (knownIntent == null) packageManager.queryIntentActivities(
+        val candidates = packageManager.queryIntentActivities(
                 Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
                 PackageManager.MATCH_ALL,
             ).map { it.loadLabel(packageManager).toString().lowercase(Locale.ROOT) to it.activityInfo.packageName }
-            else emptyList()
-        val exact = candidates.filter { it.first == normalized }
-        val matchingPackages = exact.ifEmpty { candidates.filter { it.first.contains(normalized) } }
-            .map { it.second }.distinct()
-        if (knownIntent == null && matchingPackages.size > 1) {
+        val matchingPackages = matchingAppPackages(candidates, normalized)
+        if (matchingPackages.size > 1) {
             return ToolResult.failure("More than one app matched '$appName'. Use its full app name.", "APP_AMBIGUOUS")
         }
-        val launchIntent = knownIntent
-            ?: matchingPackages.singleOrNull()?.let(packageManager::getLaunchIntentForPackage)
+        val launchIntent = matchingPackages.singleOrNull()?.let(packageManager::getLaunchIntentForPackage)
             ?: return ToolResult.failure("Application '$appName' was not found.", "APP_NOT_FOUND")
 
         return launch(launchIntent).withSuccessDetails(
@@ -66,15 +62,6 @@ internal class OpenAppTool(context: Context) : ContextTool(context) {
         )
     }
 
-    private companion object {
-        val KNOWN_APPS = mapOf(
-            "spotify" to "com.spotify.music",
-            "youtube" to "com.google.android.youtube",
-            "chrome" to "com.android.chrome",
-            "google maps" to "com.google.android.apps.maps",
-            "maps" to "com.google.android.apps.maps",
-        )
-    }
 }
 
 internal class OpenMapsTool(context: Context) : ContextTool(context) {
@@ -273,27 +260,45 @@ internal class ControlMediaTool(context: Context) : ContextTool(context) {
 internal class SearchMusicTool(context: Context) : ContextTool(context) {
     override val name = "search_music"
     override val description =
-        "Open Spotify directly to search results for a song, artist, album, or playlist. This does not prove playback started."
+        "Ask an installed music app to search and play a user-provided query through Android's standard media intent. Provider is the installed app's visible name. If unsupported, use open_app and observed UI tools instead. Dispatch does not prove playback."
     override val parameters = JSONObject(
-        """{"type":"object","properties":{"query":{"type":"string"},"provider":{"type":"string","enum":["spotify"]}},"required":["query","provider"],"additionalProperties":false}""",
+        """{"type":"object","properties":{"query":{"type":"string"},"provider":{"type":"string"}},"required":["query","provider"],"additionalProperties":false}""",
     )
     override val riskLevel = RiskLevel.LOW
     override val requiresConfirmation = false
 
     override fun execute(arguments: JSONObject): ToolResult {
         val query = requiredString(arguments, "query") ?: return invalid("query")
-        if (arguments.optString("provider") != "spotify") return invalid("provider")
-        val spotifyIntent = Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:${Uri.encode(query)}"))
-            .setPackage("com.spotify.music")
-        val webIntent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://open.spotify.com/search/${Uri.encode(query)}"),
-        )
-        val intent = if (spotifyIntent.resolveActivity(context.packageManager) != null) spotifyIntent else webIntent
+        val provider = requiredString(arguments, "provider") ?: return invalid("provider")
+        val candidates = context.packageManager.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), PackageManager.MATCH_ALL,
+        ).map { it.loadLabel(context.packageManager).toString() to it.activityInfo.packageName }
+        val packages = matchingAppPackages(candidates, provider)
+        if (packages.size != 1) return ToolResult.failure("Music app not uniquely identified. Use list_apps to find its exact name.", "APP_AMBIGUOUS")
+        val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+            .setPackage(packages.single())
+            .putExtra(SearchManager.QUERY, query)
+            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "audio/*")
         return launch(intent).withSuccessDetails(
-            message = "Opened Spotify search results for $query. Playback has not been verified.",
-            data = JSONObject().put("query", query).put("provider", "spotify"),
+            message = "Requested music search/play for $query in $provider. Playback has not been verified.",
+            data = JSONObject().put("query", query).put("provider", provider),
         )
+    }
+}
+
+internal class ListAppsTool(private val context: Context) : AgentTool {
+    override val name = "list_apps"
+    override val description = "List actual installed launchable app names. Use these names to resolve unfamiliar or ambiguous app requests; never invent package names."
+    override val parameters = JSONObject("""{"type":"object","properties":{},"required":[],"additionalProperties":false}""")
+    override val riskLevel = RiskLevel.LOW
+    override val requiresConfirmation = false
+    override fun execute(arguments: JSONObject): ToolResult {
+        val apps = context.packageManager.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), PackageManager.MATCH_ALL,
+        ).distinctBy { it.activityInfo.packageName }.sortedBy { it.loadLabel(context.packageManager).toString() }
+        val data = JSONArray()
+        apps.take(200).forEach { data.put(JSONObject().put("name", it.loadLabel(context.packageManager).toString()).put("package", it.activityInfo.packageName)) }
+        return ToolResult(true, "Listed installed launchable apps.", JSONObject().put("apps", data).put("truncated", apps.size > 200))
     }
 }
 

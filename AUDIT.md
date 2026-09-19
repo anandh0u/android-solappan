@@ -1,5 +1,16 @@
 # Current audit — 2026-09-20
 
+## Deployed gateway and dynamic runtime — newest evidence
+
+- Supabase migration and Edge Function deployed to the linked project. OPENAI_API_KEY and OPENAI_MODEL configured only on the server. Live smoke tests passed for login, beta rejection/approval, client table/RPC denial, model response, continuation ownership, quota increments and daily quota exhaustion. Temporary test accounts and provider responses deleted after testing.
+- Current debug and release generated configuration both exclude the provider key; the phone build now requires a verified, approved SOL account. No permanent app account existed when tested. Signup UI added; actual user onboarding/phone refresh remains pending.
+- Removed exposed echo mock (which previously caused gateway schema rejection), app package shortcut list and Spotify-only URI routing. Added dynamic installed-app discovery, standard media search/play routing and configurable bounded loop budget.
+- Added dedicated experimental confirmed send_message with recipient/draft/package/observation binding and one-shot dispatch. Generic tap Send remains blocked; locked screen roots are rejected. Unit policy tests pass; semantic assurance across arbitrary apps is NOT established.
+- Combined Android unit/debug/instrumentation assembly/lint build passed with 37 unit tests; 10 Deno tests pass. Updated APK installed. The device instrumentation test FAILED at observation: Android listed SOL Accessibility as enabled but crashed/unbound. It did not reach Send and did not contact anyone. User must toggle SOL screen control off/on before retesting. Do not present this feature as device-qualified.
+- User confirmed unlocked spoken Hey SOL invocation in this conversation. This does not establish screen-off/OEM accuracy or battery performance. Full-duplex voice, durable history and deferred productivity integrations remain open GitHub work.
+
+Older sections below describe earlier revisions and are superseded by this section.
+
 ## Gateway increment — latest evidence
 
 - `testDebugUnitTest assembleDebug lintDebug generateReleaseBuildConfig`: successful; 31 Android tests pass. Lint retains 31 warnings, no errors.

@@ -14,6 +14,16 @@ private val SENSITIVE_TARGET_TERMS = setOf(
     "transfer", "subscribe", "erase", "reset", "submit", "otp", "pin", "cvv",
 )
 
+/** Strict, deliberately narrow Send semantics; generic tapping remains blocked. */
+internal fun isMessageSendLabel(text: String): Boolean =
+    text.trim().lowercase(Locale.ROOT) in setOf("send", "send message")
+
+internal fun matchesMessageDraft(expectedPackage: String, actualPackage: String, expectedMessage: String,
+    actualDraft: String, expectedRecipient: String, visibleRecipient: String): Boolean =
+    expectedPackage.isNotBlank() && expectedPackage == actualPackage &&
+        expectedMessage.isNotBlank() && expectedMessage.length <= 4000 && expectedMessage == actualDraft &&
+        expectedRecipient.isNotBlank() && expectedRecipient == visibleRecipient
+
 /** One traversal order/budget shared by observation and action resolution. */
 internal fun <T> boundedScreenNodes(root: T, children: (T) -> List<T>): List<T> {
     val queue = ArrayDeque<Pair<T, Int>>().apply { add(root to 0) }

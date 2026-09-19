@@ -91,6 +91,7 @@ class SolAccessibilityService : AccessibilityService() {
             intent.getStringExtra(AccessibilityProtocol.EXTRA_TEXT).orEmpty(),
         )
         "scroll" -> scroll(intent.getStringExtra(AccessibilityProtocol.EXTRA_DIRECTION).orEmpty())
+        "send_message" -> sendMessage(intent)
         "back" -> global(GLOBAL_ACTION_BACK, "Pressed Back.")
         "home" -> global(GLOBAL_ACTION_HOME, "Pressed Home.")
         else -> ServiceResult(false, "Unknown accessibility command was rejected.", "INVALID_PARAMETERS")
@@ -201,6 +202,38 @@ class SolAccessibilityService : AccessibilityService() {
         return ServiceResult(false, "No scrollable element accepted the action.", "SCROLL_UNAVAILABLE")
     }
 
+    private fun sendMessage(intent: Intent): ServiceResult {
+        val root = controlledRoot() ?: return ServiceResult(false, "Unlock the phone and open the conversation.", "SCREEN_UNAVAILABLE")
+        val expectedPackage = intent.getStringExtra("expected_package").orEmpty()
+        val recipient = intent.getStringExtra("expected_recipient").orEmpty()
+        val message = intent.getStringExtra(AccessibilityProtocol.EXTRA_TEXT).orEmpty()
+        val target = intent.getStringExtra(AccessibilityProtocol.EXTRA_TARGET).orEmpty()
+        val nodes = screenNodes(root).filter { it.isVisibleToUser && it.isEnabled && !isPassword(it) }
+        val draft = nodes.filter { it.isEditable && it.text?.toString() == message }.singleOrNull()
+            ?: return ServiceResult(false, "The exact message is not in one visible draft field. Nothing sent.", "DRAFT_MISMATCH")
+        val draftBounds = Rect().also(draft::getBoundsInScreen)
+        val recipients = nodes.filter { node ->
+            !node.isEditable && node.text?.toString() == recipient &&
+                Rect().also(node::getBoundsInScreen).bottom <= draftBounds.top
+        }
+        val recipientNode = recipients.singleOrNull()
+            ?: return ServiceResult(false, "The recipient is missing or ambiguous above the draft. Nothing sent.", "RECIPIENT_UNVERIFIED")
+        if (!matchesMessageDraft(expectedPackage, root.packageName.toString(), message, draft.text.toString(), recipient, recipientNode.text.toString())) {
+            return ServiceResult(false, "App, recipient or draft changed. Nothing sent.", "DRAFT_MISMATCH")
+        }
+        val send = findNodes(root, target).singleOrNull()
+            ?: return ServiceResult(false, "Send target is missing or ambiguous. Nothing sent.", "ELEMENT_AMBIGUOUS")
+        if (!send.isClickable || !listOf(send.text, send.contentDescription).any { isMessageSendLabel(it?.toString().orEmpty()) }) {
+            return ServiceResult(false, "Only an explicitly labelled Send message button is supported.", "SENSITIVE_ACTION_BLOCKED")
+        }
+        if (listOf(draft, recipientNode, send).any { !matchesObservation(root, it) }) return staleTarget()
+        if (!commandIsLive()) return expiredCommand()
+        observedIdentities = emptySet()
+        return if (send.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            ServiceResult(true, "Activated Send once for the reviewed draft. Delivery is unverified; observe the conversation before reporting a result.")
+        } else ServiceResult(false, "Android rejected Send. Do not automatically retry; inspect the conversation first.", "SEND_UNCERTAIN")
+    }
+
     private fun global(action: Int, message: String): ServiceResult {
         observedIdentities = emptySet()
         if (!commandIsLive()) return expiredCommand()
@@ -284,6 +317,7 @@ class SolAccessibilityService : AccessibilityService() {
         "The action expired or was cancelled before dispatch.", "COMMAND_EXPIRED")
 
     private fun controlledRoot(): AccessibilityNodeInfo? {
+        if (getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked) return null
         val applicationWindows = windows
             .filter {
                 it.type == AccessibilityWindowInfo.TYPE_APPLICATION && (it.isActive || it.isFocused)

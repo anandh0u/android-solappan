@@ -1,5 +1,14 @@
 # Hackathon Issues
 
+## Deployment and dynamic-runtime update — latest
+
+- Supabase database migration, Edge Function and server-only model credentials deployed. Live smoke tests passed for Auth login, beta denial/approval, database grants, quota increments/denial and same-user/cross-user continuation. Temporary test accounts and provider responses removed.
+- Removed app shortcut map, Spotify-only routing and exposed echo mock. Added installed-app discovery; model comes from deployment configuration, agent loop budget is configurable and bounded.
+- Added experimental confirmed send_message with fresh draft/recipient/package checks; generic tap cannot send. English-labelled Send only, no arbitrary-app semantic or delivery guarantee. Real WhatsApp verification remains open.
+- User confirmed Hey SOL invoked the assistant on this phone while unlocked. Lock-screen/OEM/long-duration evaluation remains open.
+- Current local build is keyless gateway mode. No permanent SOL Auth user existed at deployment; create/verify a beta account in Setup, obtain owner approval, then sign in. Phone Auth/refresh and complete tool-loop qualification remain open.
+- GitHub #1–#6 remain open where acceptance criteria still require human/device tests, privacy/release decisions, realtime architecture or deferred integrations. This pack does not falsely close those broader issues.
+
 ## Gateway hardening update — 2026-09-20
 
 - Implemented: release-only gateway enforcement, email sign-in, Keystore-encrypted cross-process sessions, verified-user/beta access checks, request quotas, continuation ownership and bounded model requests. Added CI and gateway policy/auth rejection tests.

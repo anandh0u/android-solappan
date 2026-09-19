@@ -19,7 +19,7 @@ jobs:
         with:
           packages: 'platform-tools'
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - run: bash gradlew testDebugUnitTest assembleDebug lintDebug generateReleaseBuildConfig --no-daemon
+      - run: bash gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest lintDebug generateReleaseBuildConfig --no-daemon
       - name: Release must not embed a provider key
         run: grep -F 'String OPENAI_API_KEY = "";' app/build/generated/source/buildConfig/release/com/solappan/agent/BuildConfig.java
   gateway:

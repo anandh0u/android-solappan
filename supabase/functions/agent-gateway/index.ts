@@ -8,7 +8,8 @@ export async function handleRequest(req: Request, env = Deno.env.get, transport:
   const url=env('SUPABASE_URL');
   const serviceKey=env('SUPABASE_SERVICE_ROLE_KEY');
   const openaiKey=env('OPENAI_API_KEY');
-  if(!url || !serviceKey || !openaiKey) return reply(503,'Gateway is not configured.');
+  const model=env('OPENAI_MODEL');
+  if(!url || !serviceKey || !openaiKey || !model) return reply(503,'Gateway is not configured.');
   const authorization=req.headers.get('authorization') || '';
   if(!/^Bearer [A-Za-z0-9._-]+$/.test(authorization)) return reply(401,'Sign in to SOL.');
   try {
@@ -18,7 +19,7 @@ export async function handleRequest(req: Request, env = Deno.env.get, transport:
     const user=await auth.json();
     if(!user.id || user.is_anonymous || !user.email_confirmed_at) return reply(403,'A verified beta account is required.');
     let body:Record<string,unknown>;
-    try {body=validateRequest(await readBounded(req));} catch {return reply(400,'Invalid or oversized model request.');}
+    try {body=validateRequest(await readBounded(req),model);} catch {return reply(400,'Invalid or oversized model request.');}
     const headers={apikey:serviceKey,Authorization:`Bearer ${serviceKey}`,'Content-Type':'application/json'};
     if(body.previous_response_id) {
       const query=`response_id=eq.${encodeURIComponent(String(body.previous_response_id))}&user_id=eq.${encodeURIComponent(user.id)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=response_id`;

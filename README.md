@@ -38,15 +38,16 @@ flowchart LR
 
 Wake behavior is under fresh device validation. It is not an OEM low-power hotword implementation, and continuous use has a battery cost. The gesture and tile remain available.
 
-## Fourteen registered device tools
+## Sixteen registered device tools
 
 | Native APIs and intents | Optional screen control |
 | --- | --- |
-| `open_app`, `open_maps`, `set_alarm` | `observe_screen`, `scroll_screen` |
+| `list_apps`, `open_app`, `open_maps`, `set_alarm` | `observe_screen`, `scroll_screen` |
 | `find_contact`, `call_contact`, `prepare_sms` | `tap_element`, `type_text` |
 | `search_music`, `control_media` | `press_back`, `press_home` |
+| | Experimental `send_message` (explicit approval) |
 
-Calls open the dialer; messages open drafts. The user performs the final Call or Send action. Spotify search opens results and does not guarantee automatic playback. Screen control requires Android Accessibility consent and varies by app.
+Calls open the dialer; `prepare_sms` opens drafts. Experimental `send_message` can press a visible English-labelled Send button after approval, checking the app, exact draft and a matching visible recipient above it. It does not prove recipient semantics or delivery across arbitrary apps; WhatsApp end-to-end qualification is still pending. Generic taps cannot send. Music uses Android's standard media search/play intent for a dynamically resolved installed app, with observed UI fallback when unsupported. No playback guarantee is made. Screen control requires Accessibility consent and an unlocked phone.
 
 ## Try a workflow
 
@@ -67,6 +68,7 @@ Add private configuration to the Git-ignored `local.properties`:
 ```properties
 OPENAI_API_KEY=your_key_here
 OPENAI_MODEL=gpt-6-astra
+USE_GATEWAY=false
 ```
 
 The current default is **GPT-6 Astra**, using low reasoning effort. Model availability was checked with a live API request during this audit. The wake engine uses **Vosk Android 0.3.75** with a bundled small English model; command reasoning still requires internet access.
@@ -77,7 +79,7 @@ The current default is **GPT-6 Astra**, using low reasoning effort. Model availa
 
 On the phone, open **Setup**, grant microphone permission, choose SOL as the default assistant, and grant contacts only for contact workflows. Enable screen control only for accessibility tools. Enable Hey SOL explicitly; its persistent notification provides a Stop action.
 
-Release builds omit the local key and require the new authenticated Supabase gateway. Account sign-in, encrypted session storage, server quotas and per-user conversation ownership are implemented; deployment and end-to-end qualification remain pending. See [gateway setup and privacy boundaries](docs/GATEWAY.md). **Do not distribute a debug APK containing your API key.**
+Release builds omit the local key and require the authenticated Supabase gateway. The gateway and SQL migration are deployed; live authentication, access controls, quota enforcement and conversation-isolation smoke tests passed. The current phone build uses gateway mode and also excludes the provider key. Create/verify a SOL beta account in Setup, obtain owner approval and sign in. CLI/dashboard login is not an app account. Device sign-in/refresh and full agent workflows still require qualification. See [gateway setup and privacy boundaries](docs/GATEWAY.md). **Never distribute a developer-mode APK containing a provider key.**
 
 ## Runtime boundaries
 
@@ -89,9 +91,9 @@ Intent acceptance means Android received a request. It does not prove that an al
 
 ## Release status
 
-**Hackathon prototype / technical alpha.** The current audit repairs microphone contention, repeated wake activation, assistant lifetime, cancellation, and chat continuity. Android has 31 passing unit tests and the gateway has 10 passing local policy/auth tests; debug assembly and lint pass. The updated APK installed and cold-launched on the connected phone. Human spoken and cross-app regression checks remain open; [AUDIT.md](AUDIT.md) records evidence without equating earlier tests with current validation.
+**Hackathon prototype / technical alpha.** Android has 37 passing unit tests and the gateway has 10 passing local policy/auth tests; debug/instrumentation assembly and lint pass. Hosted gateway smoke tests pass. The user confirmed unlocked Hey SOL invocation. The new send device test is blocked by Android's crashed/unbound SOL Accessibility service; it sent no message. Toggle screen control off/on before retesting. Cross-app, signed-in phone and release qualification remain open; [AUDIT.md](AUDIT.md) records the evidence.
 
-Production work includes deploying and qualifying the implemented model gateway, OEM/battery qualification, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These are tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). CI now checks Android compilation/tests/lint, release key exclusion and gateway policy/authentication tests. Passing CI is not proof of device or public-release readiness.
+Production work includes qualifying signed-in phone workflows, OEM/battery behavior, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These remain tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). CI checks Android compilation/tests/lint, instrumentation-test compilation, release key exclusion and gateway policy/authentication tests. Passing CI is not proof of device or public-release readiness.
 
 ## Explore the repository
 

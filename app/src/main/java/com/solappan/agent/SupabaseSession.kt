@@ -30,6 +30,12 @@ class SupabaseSession(context: Context) {
         save(session)
     }
 
+    fun signUp(email: String, password: String) {
+        require(email.contains('@') && password.length >= 12) { "Use a valid email and a password of at least 12 characters." }
+        auth("signup", JSONObject().put("email", email.trim()).put("password", password))
+        // Do not assume signup grants beta access; verification and owner approval are separate.
+    }
+
     fun accountEmail(): String? = locked { read()?.optJSONObject("user")?.optString("email") }
 
     fun accessToken(): String = locked {

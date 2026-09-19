@@ -14,7 +14,8 @@ flowchart TD
     M[Compose chat] --> R[AgentRuntimeCoordinator]
     V --> R
     R --> C[AgentController]
-    C <--> O[OpenAI Responses API]
+    C <--> G[Authenticated Supabase gateway]
+    G <--> O[OpenAI Responses API]
     C --> T[ToolRegistry: schema / approval enforcement]
     T --> N[Native APIs and Android intents]
     T --> A[Optional restricted accessibility]
@@ -41,11 +42,11 @@ There is one agent execution pipeline. Entry surfaces own UI, speech, and approv
 
 ## Tools
 
-Eight native/intent tools: `open_app`, `open_maps`, `set_alarm`, `find_contact`, `call_contact`, `prepare_sms`, `search_music`, `control_media`.
+Nine native/intent tools: `list_apps`, `open_app`, `open_maps`, `set_alarm`, `find_contact`, `call_contact`, `prepare_sms`, `search_music`, `control_media`. App discovery uses installed labels, not a package shortcut table. Music uses Android's standard media search/play intent.
 
-Six optional screen tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, `press_home`.
+Seven optional screen tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, `press_home`, and experimental confirmed `send_message`. The latter checks the observed package, unchanged exact draft, unique visible recipient above it and English Send label; it is not universal semantic recipient verification or delivery proof. Generic tap remains prohibited from sending. Screen tools fail closed on the lock screen.
 
-Call and SMS workflows require approval and open the dialer/draft. Generic tap/type requires approval and rejects sensitive or ambiguous targets. Native APIs remain preferred. Spotify search does not guarantee autoplay; media-key dispatch does not prove playback.
+Call and SMS-draft workflows require approval and open the dialer/draft. Generic tap/type requires approval and rejects sensitive or ambiguous targets. Native APIs remain preferred. Music-intent and media-key dispatch do not prove playback. The development echo tool is no longer exposed by the phone registry. The bounded agent-turn budget is build-configurable (default 24, maximum 40).
 
 ## Voice lifecycle
 
@@ -65,7 +66,7 @@ Screen content is untrusted data. Password filtering and sensitive-label checks 
 
 ## Configuration and release
 
-`local.properties` is Git-ignored and supplies local API configuration. A key compiled into an APK is extractable; do not distribute that build publicly. A production gateway, authentication, quotas, privacy/retention controls, release signing, and monitoring are tracked in GitHub issues.
+`local.properties` is Git-ignored and supplies local configuration. Gateway mode excludes the provider key even in debug builds; releases always force gateway mode. The Supabase schema and function are deployed with verified-user/beta access, quotas and continuation ownership. Phone onboarding, privacy/retention qualification, release signing and monitoring remain tracked in GitHub issues. Explicit developer direct mode embeds an extractable key and must not be distributed.
 
 Contact tools return IDs/names rather than raw phone numbers. Explicit screen context can still contain private information. Local clearing does not delete provider-side records.
 

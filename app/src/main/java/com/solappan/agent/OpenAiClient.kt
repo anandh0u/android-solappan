@@ -43,6 +43,7 @@ class OpenAiClient(
         check(session != null || apiKey.isNotBlank()) {
             "OpenAI API key is missing. Add OPENAI_API_KEY to local.properties and rebuild."
         }
+        check(session != null || model.isNotBlank()) { "Configure OPENAI_MODEL in local.properties and rebuild." }
 
         Log.i(TAG, "OpenAI request started")
         val bearer = session?.accessToken() ?: apiKey

@@ -715,7 +715,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         private const val SCREEN_ACTION_WINDOW_DELAY_MS = 700L
         private const val MAX_SPOKEN_CHARS = 1_200
         private val SCREEN_ACTION_TOOLS = setOf(
-            "observe_screen", "tap_element", "type_text", "scroll_screen", "press_back", "press_home",
+            "observe_screen", "tap_element", "type_text", "scroll_screen", "press_back", "press_home", "send_message",
         )
         private val SCREEN_CONTEXT_PHRASES = listOf(
             "on my screen",

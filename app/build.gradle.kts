@@ -24,6 +24,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SUPABASE_URL", quotedBuildValue(localProperties.getProperty("SUPABASE_URL", "")))
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", quotedBuildValue(localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")))
         buildConfigField("boolean", "USE_GATEWAY", localProperties.getProperty("USE_GATEWAY", "false").toBoolean().toString())
@@ -31,13 +32,14 @@ android {
         buildConfigField(
             "String",
             "OPENAI_API_KEY",
-            quotedBuildValue(localProperties.getProperty("OPENAI_API_KEY", "")),
+            quotedBuildValue(if (localProperties.getProperty("USE_GATEWAY", "false").toBoolean()) "" else localProperties.getProperty("OPENAI_API_KEY", "")),
         )
         buildConfigField(
             "String",
             "OPENAI_MODEL",
-            quotedBuildValue(localProperties.getProperty("OPENAI_MODEL", "gpt-6-astra")),
+            quotedBuildValue(localProperties.getProperty("OPENAI_MODEL", "")),
         )
+        buildConfigField("int", "MAX_AGENT_TURNS", (localProperties.getProperty("MAX_AGENT_TURNS", "24").toIntOrNull()?.coerceIn(1, 40) ?: 24).toString())
     }
 
     buildFeatures {
@@ -74,4 +76,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("junit:junit:4.13.2")
 }
