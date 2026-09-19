@@ -140,11 +140,33 @@ MainActivity requests microphone permission through Android, assistant invocatio
 
 Actual:
 
-Microphone setup and session-owned `SpeechRecognizer` integration are implemented. On the connected phone, Android permission grant, the active microphone indicator, Listening state, no-match handling, and Retry UI were verified. A successful spoken transcript still requires one manual voice test because synthesized audio from the development computer was not captured by the phone. Recognized text is intentionally not sent to the agent until P0.6.
+Microphone setup and session-owned `SpeechRecognizer` integration are implemented. On the connected phone, Android permission grant, the active microphone indicator, Listening state, successful spoken transcription, no-match handling, and Retry UI were verified.
 
 Status:
 
-WORKING — successful transcript display awaits manual speech verification.
+COMPLETE — the user manually verified successful spoken transcription on the connected phone.
+
+### ASSISTANT-P0.6 — Send assistant transcript into existing agent
+
+Priority:
+
+P0
+
+Problem:
+
+The assistant session could transcribe speech but did not submit the recognized goal to the existing agent runtime.
+
+Expected:
+
+A final speech transcript enters `AgentRuntimeCoordinator`, `AgentController`, and `ToolRegistry` exactly like text input, with no command parser or second agent pipeline.
+
+Actual:
+
+The session now submits final transcripts into the shared runtime, shows basic execution state, displays the final result or safe error, and dismisses shortly after successful completion. The user spoke “Open Spotify”; two model requests completed, the registered `open_app` tool launched Spotify, and the assistant session dismissed automatically. Until P0.9 adds assistant confirmation UI, protected tools fail closed by returning a denied confirmation decision.
+
+Status:
+
+COMPLETE
 
 ### SAFETY-001 — Prevent confirmation click-through
 

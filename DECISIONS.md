@@ -144,3 +144,11 @@ Status: Accepted
 The assistant session uses Android's `SpeechRecognizer` with explicit `RECORD_AUDIO` permission rather than a second model-facing voice pipeline. Partial and final transcripts stay inside the assistant session and will enter the existing `AgentController` pipeline as text.
 
 MainActivity remains responsible for explaining and requesting microphone permission. The session handles missing permission, unavailable recognition, silence, cancellation, network failure, and retry without crashing.
+
+## ADR-017 — Assistant Reuses the Existing Agent Pipeline
+
+Status: Accepted
+
+Final assistant transcripts are submitted to the same `AgentRuntimeCoordinator`, `AgentController`, and `ToolRegistry` used by MainActivity. No keyword command parser or alternate voice-agent logic is permitted.
+
+Protected tool requests from the assistant fail closed until the assistant-specific confirmation UI is implemented. Low-risk completed workflows dismiss the temporary session after a short visible completion delay.

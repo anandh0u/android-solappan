@@ -20,6 +20,18 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.solappan.agent.AgentController
+import com.solappan.agent.AgentRuntimeCoordinator
+import com.solappan.agent.AgentRuntimeUiState
+import com.solappan.agent.AgentState
+import com.solappan.agent.tools.ToolRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInteractionSession(sessionContext) {
     private lateinit var statusText: TextView
@@ -27,6 +39,11 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private lateinit var retryButton: Button
     private var speechRecognizer: SpeechRecognizer? = null
     private var listening = false
+    private var uiVisible = false
+    private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val runtime = AgentRuntimeCoordinator(
+        AgentController(registry = ToolRegistry.sessionThree(sessionContext.applicationContext)),
+    )
 
     override fun onCreateContentView(): View {
         val root = FrameLayout(sessionContext).apply {
@@ -101,17 +118,20 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
+        uiVisible = true
         Log.i(TAG, "Assistant session shown")
         startListening()
     }
 
     override fun onHide() {
+        uiVisible = false
         stopListening()
         Log.i(TAG, "Assistant session hidden")
         super.onHide()
     }
 
     override fun onDestroy() {
+        sessionScope.cancel()
         speechRecognizer?.destroy()
         speechRecognizer = null
         super.onDestroy()
@@ -198,7 +218,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             } else {
                 statusText.text = "Heard you"
                 transcriptText.text = "“$transcript”"
-                retryButton.visibility = View.VISIBLE
+                retryButton.visibility = View.GONE
+                submitTranscript(transcript)
             }
         }
 
@@ -211,6 +232,52 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         }
 
         override fun onEvent(eventType: Int, params: Bundle?) = Unit
+    }
+
+    private fun submitTranscript(transcript: String) {
+        statusText.text = "Understanding…"
+        sessionScope.launch {
+            withContext(Dispatchers.IO) {
+                runtime.run(
+                    goal = transcript,
+                    onState = { state ->
+                        withContext(Dispatchers.Main) { renderRuntimeState(state, transcript) }
+                    },
+                    // Assistant confirmation arrives in P0.9. Until then, protected tools fail closed.
+                    requestConfirmation = { false },
+                )
+            }
+        }
+    }
+
+    private fun renderRuntimeState(state: AgentRuntimeUiState, transcript: String) {
+        if (!uiVisible) return
+        statusText.text = when (state.agentState) {
+            AgentState.IDLE -> "Ready"
+            AgentState.THINKING -> "Understanding…"
+            AgentState.PLANNING -> "Planning…"
+            AgentState.EXECUTING -> "Working…"
+            AgentState.WAITING_FOR_CONFIRMATION -> "Approval required"
+            AgentState.VERIFYING -> "Checking result…"
+            AgentState.COMPLETED -> "Done"
+            AgentState.FAILED -> "Couldn't complete"
+            AgentState.CANCELLED -> "Cancelled"
+        }
+        transcriptText.text = when {
+            state.error != null -> state.error
+            state.response.isNotBlank() -> state.response
+            else -> "“$transcript”"
+        }
+        if (!state.loading) {
+            if (state.error != null) {
+                retryButton.visibility = View.VISIBLE
+            } else {
+                sessionScope.launch {
+                    delay(1_500)
+                    if (uiVisible) finish()
+                }
+            }
+        }
     }
 
     private fun TextView.withTopMargin(margin: Int): TextView = apply {
