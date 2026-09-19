@@ -13,8 +13,19 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 private class AccessibilityCommandClient(private val context: Context) {
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun execute(command: String, extras: Map<String, String> = emptyMap()): ToolResult {
+        var lastResult: ToolResult? = null
+        repeat(if (command == "observe") OBSERVE_ATTEMPTS else 1) { attempt ->
+            if (attempt > 0) Thread.sleep(OBSERVE_RETRY_DELAY_MS * attempt)
+            val result = executeOnce(command, extras)
+            lastResult = result
+            if (result.errorCode != "SCREEN_UNAVAILABLE") return result
+        }
+        return lastResult ?: ToolResult.failure("No accessibility result was available.", "SCREEN_UNAVAILABLE")
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private fun executeOnce(command: String, extras: Map<String, String>): ToolResult {
         if (!AccessibilityProtocol.isEnabled(context)) {
             return ToolResult.failure(
                 "SOL accessibility is disabled. Enable it from the agent setup screen and retry.",
@@ -74,6 +85,8 @@ private class AccessibilityCommandClient(private val context: Context) {
 
     private companion object {
         const val COMMAND_TIMEOUT_SECONDS = 4L
+        const val OBSERVE_ATTEMPTS = 4
+        const val OBSERVE_RETRY_DELAY_MS = 350L
     }
 }
 
