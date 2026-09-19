@@ -190,6 +190,28 @@ Status:
 
 WORKING — implementation is stable; live timeline visibility awaits manual confirmation.
 
+### ASSISTANT-P0.8 — Existing tools from assistant invocation
+
+Priority:
+
+P0
+
+Problem:
+
+The existing Android tools had been verified from MainActivity, but needed device validation when the goal originated in the system assistant session process.
+
+Expected:
+
+Low-risk registered tools execute through the existing controller and registry, multi-tool workflows remain supported, and protected tools do not bypass missing assistant confirmation UI.
+
+Actual:
+
+Physical-device assistant tests passed for `open_app`, `set_alarm`, `open_maps`, and `find_contact`. The user spoke the alarm + GEC Thrissur goal; Android recent-task records confirmed both `ACTION_SET_ALARM` in Google Clock and Google Maps. Read-only contact lookup completed its model/tool round trip. A spoken call request completed as cancelled and returned to the launcher without opening the dialer, confirming fail-closed behaviour before P0.9.
+
+Status:
+
+COMPLETE
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:
