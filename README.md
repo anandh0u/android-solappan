@@ -1,6 +1,6 @@
 # SOL · Agent Runtime for Android
 
- Next-Gen Productivity & Automation**
+**Next-Gen Productivity & Automation**
 
 Give SOL a goal. It reasons through the task, chooses registered Android tools, asks for approval when needed, and reports the result.
 
