@@ -1,5 +1,7 @@
 # Product Requirements Document
 
+> Core hackathon baseline. Subsequent authorized upgrades add optional assistant voice, offline wake and restricted accessibility. The current assistant remains open until user dismissal (superseding earlier upgrade examples that auto-dismissed). See README.md, AUDIT.md and the GitHub backlog linked from ISSUES.md for current capability and verification boundaries. Production voice/full-device automation remains a separate release effort.
+
 ## 1. Product Name
 
 Temporary name:

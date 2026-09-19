@@ -1,5 +1,15 @@
 # Architecture Decision Log
 
+## ADR-029 — Audit corrections and current behavior (2026-09-20)
+
+Supersedes the auto-dismiss portions of ADR-017 and recognizer-loop implementation of ADR-027. The assistant stays visible after completion until Close SOL, an explicit spoken dismissal, or system/user dismissal. One post-TTS follow-up recognition turn is offered; silence does not restart the recognizer. Three bounded text turns provide session-local context, never authorization or stale screen evidence.
+
+Wake detection uses bundled Vosk 0.3.75 with the Apache-2.0 small US English model, continuous on-device audio, exact final phrases, and a visible opt-in microphone foreground service. Independent app/session pause owners prevent TTS feedback. Ordered pause broadcasts acknowledge microphone release before manual assistant recognition. Failed launches stop rather than triggering repeated popups. This is not a hardware low-power hotword guarantee.
+
+The model default is GPT-6 Astra, low reasoning effort, 4096 output-token ceiling and sequential function calls. Account availability and a live Responses request were verified. Local configuration may override this; no secrets enter Git. Public APK distribution still requires the secure gateway in GitHub issue #1.
+
+Accessibility observation and matching now share a 512-node/32-depth traversal. Tap/type require recent observed identity, bounds and window; changes invalidate targets. Commands carry cancellation leases and deadlines; controller execution is interruptible. Already-dispatched Android effects cannot be reversed. Label guards are heuristic, not a semantic security proof (issue #3).
+
 ## ADR-001 — Native Android
 
 Status: Accepted

@@ -2,346 +2,79 @@
 
 ## Purpose
 
-This repository contains an experimental Android agent runtime built during a 12-hour hackathon.
+SOL is an Android agent runtime for **Track 04 — Next-Gen Productivity & Automation**. Users express goals through chat or the system assistant. The model chooses registered capabilities; Android validates and executes them.
 
-The system allows an AI model to translate natural-language goals into structured Android tool calls.
+Current maturity: hackathon technical alpha. See [AUDIT.md](AUDIT.md) for evidence and [GitHub issues](https://github.com/anandh0u/android-solappan/issues) for production work.
 
-The model does not directly control Android.
+## Architecture
 
-All actions pass through a controlled tool registry.
+```mermaid
+flowchart TD
+    W[Optional offline Vosk wake service] --> V[Android voice interaction session]
+    M[Compose chat] --> R[AgentRuntimeCoordinator]
+    V --> R
+    R --> C[AgentController]
+    C <--> O[OpenAI Responses API]
+    C --> T[ToolRegistry: schema / approval enforcement]
+    T --> N[Native APIs and Android intents]
+    T --> A[Optional restricted accessibility]
+    N --> C
+    A --> C
+    R --> U[Progress / results / final-answer TTS]
+```
 
-## Product Positioning
+There is one agent execution pipeline. Entry surfaces own UI, speech, and approval presentation. The current default model is `gpt-6-astra` with low reasoning effort.
 
-This project is locked to **Track 04 — Next-Gen Productivity & Automation**.
+## Components
 
-Its core claim is: **we built an agent runtime that turns Android into a tool environment for AI.** The model decides what should happen; the Android runtime validates what is allowed and determines how it happens.
+| Component | Responsibility |
+| --- | --- |
+| MainActivity | Chat, bounded visible transcript, speech submission, Stop, setup and approval |
+| VoiceInteractionService/session | System invocation, persistent assistant panel, speech input/output, explicit close |
+| SolWakeWordService | Opt-in microphone foreground service; offline Vosk wake detection |
+| AssistantConversation | Last three bounded text turns, session-local, without screenshots or grants |
+| AgentRuntimeCoordinator | Convert agent events/results into UI state |
+| AgentController | Bounded reasoning/tool loop and cancellation |
+| ToolRegistry | Registered names, parameter schema validation, confirmation enforcement |
+| AndroidTool implementations | Native intent/API execution and structured results |
+| Optional accessibility service | Bounded screen observation/actions through signature-protected app messages |
 
-## High-Level Architecture
+## Tools
 
-User through Compose, Android assistant, Quick Settings, or optional Hey SOL
+Eight native/intent tools: `open_app`, `open_maps`, `set_alarm`, `find_contact`, `call_contact`, `prepare_sms`, `search_music`, `control_media`.
 
-↓
+Six optional screen tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, `press_home`.
 
-Compose UI
+Call and SMS workflows require approval and open the dialer/draft. Generic tap/type requires approval and rejects sensitive or ambiguous targets. Native APIs remain preferred. Spotify search does not guarantee autoplay; media-key dispatch does not prove playback.
 
-↓
+## Voice lifecycle
 
-AgentController
+Wake detection uses Vosk Android 0.3.75 and a bundled small English model. It replaces repeatedly restarting Android SpeechRecognizer for wake monitoring. The service has a persistent notification and explicit stop control.
 
-↓
+The foreground app and assistant coordinate microphone ownership so wake detection pauses during command recognition and TTS. Assistant responses no longer auto-dismiss the panel. A follow-up listening turn is offered after speech output; silence leaves a manual Talk again action. Close SOL is recognized during active listening. Android may still dismiss/recreate the service due to lifecycle or resource conditions.
 
-OpenAI Model
+Command recognition uses Android's installed provider. TTS speaks the final model answer. Full-duplex realtime audio and durable conversation recovery remain future work.
 
-↓
+## State and safety
 
-Structured Tool Call
+The shared UI tracks idle, thinking/planning, execution, confirmation, verification, completion, failure, and cancellation. Results expose success, message, data, and an error code. Failed actions must not become success merely because the model later responds.
 
-↓
+Protected actions need a user decision and a registry grant. Hiding/destroying the assistant or cancelling work denies pending approval. Cancellation cannot undo an Android action already dispatched.
 
-ToolRegistry
+Screen content is untrusted data. Password filtering and sensitive-label checks reduce exposure but do not provide comprehensive screenshot redaction or semantic assurance across arbitrary apps. Intent acceptance and visible observation are distinct from real-world outcome verification.
 
-↓
+## Configuration and release
 
-Risk / Permission Check
+`local.properties` is Git-ignored and supplies local API configuration. A key compiled into an APK is extractable; do not distribute that build publicly. A production gateway, authentication, quotas, privacy/retention controls, release signing, and monitoring are tracked in GitHub issues.
 
-↓
+Contact tools return IDs/names rather than raw phone numbers. Explicit screen context can still contain private information. Local clearing does not delete provider-side records.
 
-Android Tool
+## Development priorities
 
-↓
+Preserve the shared native Android architecture. Prefer native APIs, then intents, then constrained accessibility. Use registered tools only; reject invalid parameters and unknown names. Keep dependencies purposeful, compile frequently, test consequential behavior, and describe validation honestly.
 
-Android API / Intent
+```powershell
+.\gradlew.bat testDebugUnitTest assembleDebug lintDebug
+```
 
-↓
-
-Tool Result
-
-↓
-
-AgentController
-
-↓
-
-Model
-
-↓
-
-UI Result
-
-## Main Components
-
-### AgentController
-
-Responsible for:
-
-- sending requests to model
-- maintaining conversation/task state
-- receiving tool calls
-- executing tools
-- returning tool results
-- continuing agent loop
-- handling completion/failure
-
-### ToolRegistry
-
-Stores all available tools.
-
-Responsibilities:
-
-- register tools
-- retrieve tool by name
-- reject unknown tools
-- expose tool schemas to model
-
-### AndroidTool
-
-Every tool should follow a common conceptual structure:
-
-- name
-- description
-- parameters
-- risk level
-- confirmation requirement
-- execute
-- optional verify
-
-## Tool Contract
-
-Each tool should contain:
-
-`name`
-
-Unique tool identifier.
-
-`description`
-
-Clear explanation for the model.
-
-`parameters`
-
-Structured arguments.
-
-`riskLevel`
-
-LOW, MEDIUM, or HIGH.
-
-`requiresConfirmation`
-
-Boolean.
-
-`execute()`
-
-Runs Android functionality.
-
-`verify()`
-
-Optional validation of result.
-
-## Core Tools
-
-### open_app
-
-Input:
-
-- appName
-
-Behaviour:
-
-- resolve package
-- launch installed application
-- gracefully fail if not installed
-
-Risk:
-
-LOW
-
-### open_maps
-
-Input:
-
-- destination
-
-Behaviour:
-
-- construct geo/navigation intent
-- open mapping application
-
-Risk:
-
-LOW
-
-### set_alarm
-
-Input:
-
-- hour
-- minute
-- label
-
-Behaviour:
-
-- use Android alarm intent/API
-
-Risk:
-
-LOW
-
-### find_contact
-
-Input:
-
-- query
-
-Behaviour:
-
-- search Android contacts
-- return matching contacts
-
-Risk:
-
-LOW
-
-### call_contact
-
-Input:
-
-- contact reference
-
-Behaviour:
-
-- resolve phone number
-- prepare dial/call action
-- request confirmation when necessary
-
-Risk:
-
-MEDIUM
-
-### prepare_sms
-
-Input:
-
-- recipient
-- message
-
-Behaviour:
-
-- resolve recipient
-- open SMS/message composer
-- insert message
-- allow user approval before sending
-
-Risk:
-
-MEDIUM
-
-### control_media
-
-Input:
-
-- action: `play`, `pause`, `next`, or `previous`
-
-Behaviour:
-
-- dispatch a native Android media command to the active media session
-- reject unsupported actions
-
-Risk:
-
-LOW
-
-### search_music
-
-Opens Spotify search results for a validated query. It does not claim that playback started.
-
-Risk: LOW
-
-### Optional accessibility tools
-
-`observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home` provide a restricted fallback when native Android APIs are unavailable. Tap and type require approval. Sensitive, password, ambiguous, hidden, disabled, stale, and SOL-owned targets are rejected.
-
-## Security Requirements
-
-Never hardcode:
-
-- OpenAI API keys
-- secrets
-- tokens
-- private phone numbers
-- credentials
-
-Do not commit secrets to Git.
-
-For the hackathon prototype, API configuration may be stored locally.
-
-For any public or production deployment, move sensitive API access behind a backend.
-
-## Error Handling
-
-Every tool must return a structured result.
-
-Example result fields:
-
-- success
-- message
-- data
-- errorCode
-
-Never crash because a tool fails.
-
-Example failures:
-
-- contact not found
-- application not installed
-- permission denied
-- model produced malformed parameters
-- Android Intent unavailable
-
-Failures must be shown to the agent so it can respond or recover.
-
-## Model Rules
-
-The model:
-
-CAN:
-
-- reason
-- plan
-- select tools
-- provide tool parameters
-- interpret tool results
-
-The model CANNOT:
-
-- execute arbitrary Android code
-- execute arbitrary shell commands
-- bypass registered tools
-- automatically approve protected actions
-
-## UI
-
-The primary screen defaults to:
-
-- custom SOL identity
-- conversation
-- microphone, text input, and Send controls
-- compact wake status
-- confirmation dialogs and progress only when relevant
-- a collapsed Setup panel for permissions and Android integration
-
-Avoid unnecessary screens.
-
-One polished agent screen is enough for the MVP.
-
-## Coding Principles
-
-- Kotlin first
-- Jetpack Compose UI
-- native Android APIs first
-- Intents second
-- external APIs if necessary
-- Accessibility only as fallback
-- minimum dependencies
-- small modular components
-- compile frequently
-- do not over-engineer
+Final combined validation is recorded in [AUDIT.md](AUDIT.md), while historical decisions and tests remain in [DECISIONS.md](DECISIONS.md) and [ISSUES.md](ISSUES.md).

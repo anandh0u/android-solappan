@@ -55,7 +55,11 @@ class ToolRegistry(tools: List<AgentTool>) {
             )
         }
         return try {
+            if (Thread.currentThread().isInterrupted) throw InterruptedException()
             tool.execute(arguments)
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw interrupted
         } catch (_: Exception) {
             ToolResult.failure(
                 message = "Tool '$name' failed safely.",

@@ -1,5 +1,7 @@
 # 12-Hour Build Plan
 
+> Historical implementation plan. Later user-authorized voice/accessibility upgrades and the 2026-09-20 audit extend this scope. Current behavior and evidence are in README.md and AUDIT.md; remaining production and stretch work is linked at the top of ISSUES.md. Completed boxes below describe earlier milestones, not release certification.
+
 ## Locked Track and MVP
 
 Track: **04 — Next-Gen Productivity & Automation**.

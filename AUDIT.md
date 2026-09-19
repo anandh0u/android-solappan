@@ -1,41 +1,53 @@
-# Existing MVP audit — 2026-09-20
+# Current audit — 2026-09-20
 
-Scope: audit and repair already implemented functionality only. No new milestone or stretch feature is authorized.
+This report supersedes the earlier 18-test audit as the current status. Historical device results remain in `ISSUES.md`; they do not certify the updated build. Scope includes reported microphone noise/repeated activation, outside-app invocation, persistent assistant conversation, tool safety, UI, model configuration, and documentation.
 
-## Repairs
+## Findings and repairs in source
 
-- Preserve failed Android intent messages instead of replacing them with success descriptions.
-- Keep the run status failed when any tool failed, even if the model subsequently answers.
-- Validate required fields, supported argument names, strings, integers, ranges and enums before approval or execution.
-- Propagate cancellation and check it before tool execution; dismissing the assistant cancels remaining work and denies pending approval. Actions already dispatched to Android cannot be undone.
-- Prevent repeated Run taps, refresh speech recognition between attempts, and cancel old auto-dismiss jobs.
-- Keep text-only answers and failures visible; allow scrolling within the assistant panel.
-- Clear local screen context on hide, destroy and submission; bound assist-text traversal and exclude hidden/password fields. This is not screenshot redaction or a guarantee about provider retention.
-- Preserve multiple contact numbers so ambiguous choices fail safely rather than silently choosing one.
-- Guard Android-version-specific role APIs and restrict assistant invocation broadcasts; the tile requires the active assistant and unlocking.
+| Finding | Current change | Evidence still needed |
+| --- | --- | --- |
+| Repeated Android recognizer restarts caused audible microphone cues and could re-trigger SOL | Replace wake recognition loop with offline Vosk; coordinate microphone ownership | Real spoken phrases, silence, false positives, battery/OEM behavior |
+| Assistant disappeared after a successful tool command | Keep panel available until explicit close or Android lifecycle dismissal | Multiple spoken commands, Close SOL, Back/dismiss |
+| Assistant and wake listener could compete for the microphone or hear TTS | Owner-specific pause/resume coordination; serialized listening and speech output | Invoke over foreground app, background app, and during/after TTS |
+| Main chat replaced its previous turn and voice input only filled the editor | Bounded visible history, three-turn context, automatic voice submission | Follow-up reference and speech-to-action check |
+| App lacked a running-task Stop control and robust approval cleanup | Cancel running coroutine; deny pending approval on cancellation/disposal | Cancel before execution and during a protected workflow |
+| Long approval content and keyboard reduced usability | Scrollable approval content, keyboard insets, conversation scrolling | Small-screen/large-font device check |
+| Current-facing docs overstated readiness and omitted added capabilities | Update capability, architecture, privacy, and release claims | Keep evidence table updated after final tests |
 
-## Evidence
+The API default is GPT-6 Astra with low reasoning effort. A live model availability request succeeded during this audit; this alone does not validate complete device workflows.
 
-| Check | Result |
+## Validation status for this revision
+
+| Check | Status |
 | --- | --- |
-| Debug build | Passed |
-| Unit tests | 18 passed |
-| Android lint | Passed, warnings remain |
-| Install on connected phone | Passed |
-| Fresh Open Spotify request | Model/tool round trip completed; actual foreground app not independently confirmed in this audit |
-| Fresh nonexistent-app request | UI displayed Failed and the actual app-not-found error |
-| Assistant invocation via injected assist key | Inconclusive; observed focus did not establish popup visibility |
-| Calls, SMS, alarms, maps, media, screen understanding | Earlier recorded/user-confirmed evidence only; not freshly revalidated end-to-end in this audit |
-| Tracked credential check | No detected API key; local.properties remains ignored |
+| MainActivity Kotlin compilation during development | Passed |
+| Full debug build, unit suite, Android lint | Passed: 29 tests, 0 lint errors; non-blocking warnings remain |
+| Installation of final combined APK | Passed on connected Nothing phone, Android 16 / API 36 |
+| Bundled offline wake model and audio startup | Passed: archive extracted, native model/grammar loaded, foreground audio service started outside app |
+| Fresh wake phrase outside app / no repeated popups | Pending physical-device test |
+| Persistent assistant, spoken follow-up, explicit close | Pending physical-device test |
+| Call/SMS approval and cancellation | Historical evidence; fresh regression pending |
+| Native Open Spotify through Astra | Passed: model/tool/result round trip, Spotify confirmed foreground, result visible on return |
+| Accessibility disabled recovery | Passed: Settings opened; observation reported ACCESSIBILITY_DISABLED and did not falsely claim a scroll |
+| Accessibility observe, scroll, Back, Home | Fresh action regression blocked until user re-enables SOL screen control |
+| Chrome tap and type | Open qualification case; do not label verified |
+| Model availability and tool protocol | GPT-6 Astra live text response and structured echo function call both completed |
+| Release credential guard | Generated release BuildConfig verified to contain an empty API key |
 
-## Remaining limits / manual checks
+## Required regression pass
 
-- Recheck the actual Quick Settings tile or configured system gesture, speech retry, and dismissal during a multi-step workflow on the phone after this update.
-- Recheck approved and cancelled call/SMS drafts. Calls still open the dialer; messages still open drafts, not automatic sending.
-- Intent acceptance is not proof that navigation started or an alarm was saved. Media-key dispatch is not proof of playback.
-- At audit time, accessibility scrolling/tapping and the custom “Hey Sol” wake word were not implemented. Later upgrades added optional restricted accessibility and an experimental foreground wake listener; see `ISSUES.md` for current validation status.
-- The model may suggest unsupported next steps in prose; only registered tools can execute.
-- Screen context is sent to the model for explicit screen questions. Local clearing does not delete remote API records. A build-time API key in an APK is not suitable for public distribution.
-- Dependency/string-resource/icon warnings remain; no dependency upgrade or architecture rewrite was attempted.
+1. Leave SOL enabled at the launcher in silence; check for microphone beeps and unsolicited popups. Speak Hey SOL once and confirm one invocation.
+2. Ask a question, hear the answer, ask a follow-up, and confirm the panel remains. Say Close SOL during listening and verify dismissal.
+3. Run a native multi-step workflow; distinguish Android intent acceptance from visible completion.
+4. Cancel protected call/SMS and tap/type requests; verify nothing executes. Approve only a reviewable test draft.
+5. Stop a running workflow and dismiss an assistant with pending approval; verify no later tool executes.
+6. Test missing app, denied permission, unavailable network, and unavailable screen with readable errors.
+7. Observe, scroll, and re-observe a known app; qualify Chrome tap/type separately.
 
-Stop here pending the user's next instruction. This report does not certify every physical-device workflow as newly tested.
+## Release limits
+
+This is a technical alpha, not a production certification. Debug builds contain the local model key and must not ship publicly. Release builds omit it; a secured backend is still required. Vosk wake audio stays on-device, but Android command recognition may use the installed recognition provider, and model requests/screen context use OpenAI. TTS is final-answer speech, not full-duplex streaming audio.
+
+The app has bounded in-memory text context, not durable conversation storage. Accessibility labels and visible observations cannot guarantee semantic safety across every app. Calls remain dialer flows and SMS remains draft preparation.
+
+Production and deferred integration work is tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). No percentage in this report substitutes for device qualification.

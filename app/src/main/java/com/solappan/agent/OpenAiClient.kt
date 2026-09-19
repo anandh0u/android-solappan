@@ -58,8 +58,9 @@ class OpenAiClient(
                 .put("input", input)
                 .put("instructions", instructions)
                 .put("tools", tools)
-                .put("parallel_tool_calls", true)
-                .put("max_output_tokens", 800)
+                .put("parallel_tool_calls", false)
+                .put("reasoning", JSONObject().put("effort", "low"))
+                .put("max_output_tokens", 4096)
                 .apply { previousResponseId?.let { put("previous_response_id", it) } }
                 .toString()
             connection.outputStream.bufferedWriter().use { it.write(body) }
@@ -80,6 +81,9 @@ class OpenAiClient(
             }
 
             JSONObject(responseBody).also {
+                if (it.optString("status") == "incomplete") {
+                    throw IOException("The model reached its response limit. Try a shorter workflow.")
+                }
                 Log.i(TAG, "OpenAI request completed")
             }
         } catch (error: Exception) {

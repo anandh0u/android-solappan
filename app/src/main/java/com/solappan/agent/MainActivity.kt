@@ -18,6 +18,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,11 +28,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -60,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,10 +73,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.solappan.agent.accessibility.AccessibilityProtocol
 import com.solappan.agent.assistant.SolWakeWordService
+import com.solappan.agent.assistant.AssistantConversation
 import com.solappan.agent.tools.ToolConfirmation
 import com.solappan.agent.tools.ToolRegistry
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -107,6 +118,8 @@ private data class PendingApproval(
     val decision: CompletableDeferred<Boolean>,
 )
 
+private data class ChatTurn(val goal: String, val state: AgentRuntimeUiState)
+
 @Composable
 private fun SolChatScreen() {
     val context = LocalContext.current
@@ -114,9 +127,17 @@ private fun SolChatScreen() {
         AgentController(registry = ToolRegistry.sessionThree(context.applicationContext))
     }
     val runtime = remember(controller) { AgentRuntimeCoordinator(controller) }
+    val conversation = remember(controller) { AssistantConversation() }
     var goal by remember { mutableStateOf("") }
     var submittedGoal by remember { mutableStateOf("") }
     var runtimeState by remember { mutableStateOf(AgentRuntimeUiState()) }
+    var history by remember { mutableStateOf(emptyList<ChatTurn>()) }
+    var runJob by remember { mutableStateOf<Job?>(null) }
+    var voiceTranscript by remember { mutableStateOf<String?>(null) }
+    var speechActive by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf<String?>(null) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val listState = rememberLazyListState()
     var showSetup by remember { mutableStateOf(false) }
     var pendingApproval by remember { mutableStateOf<PendingApproval?>(null) }
     var approvalReady by remember { mutableStateOf(false) }
@@ -168,9 +189,10 @@ private fun SolChatScreen() {
     }
     val speechAvailable = remember { speechIntent.resolveActivity(context.packageManager) != null }
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        speechActive = false
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()?.trim()?.takeIf(String::isNotEmpty)?.let { goal = it }
+                ?.firstOrNull()?.trim()?.takeIf(String::isNotEmpty)?.let { voiceTranscript = it }
         }
     }
 
@@ -182,6 +204,8 @@ private fun SolChatScreen() {
                 roleHeld = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                     roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
                 wakeEnabled = isWakeServiceRunning(context)
+                microphoneGranted = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                contactsGranted = context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -191,6 +215,46 @@ private fun SolChatScreen() {
     val ttsHolder = remember { arrayOfNulls<TextToSpeech>(1) }
     var ttsReady by remember { mutableStateOf(false) }
     var lastSpoken by remember { mutableStateOf("") }
+    // The foreground app owns voice while visible or executing. The wake service
+    // must not hear TTS or compete with the system recognition activity.
+    var foreground by remember { mutableStateOf(true) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) foreground = true
+            if (event == Lifecycle.Event.ON_STOP) {
+                foreground = false
+                ttsHolder[0]?.stop()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            pendingApproval?.decision?.complete(false)
+            runJob?.cancel()
+            context.sendBroadcast(Intent(SolWakeWordService.ACTION_RESUME).setPackage(context.packageName)
+                .putExtra("pause_owner", "main_app"),
+                "com.solappan.agent.permission.INVOKE_ASSISTANT")
+        }
+    }
+    LaunchedEffect(foreground, runtimeState.loading, speechActive, wakeEnabled) {
+        val action = if (foreground || runtimeState.loading || speechActive) SolWakeWordService.ACTION_PAUSE
+            else SolWakeWordService.ACTION_RESUME
+        context.sendBroadcast(Intent(action).setPackage(context.packageName).putExtra("pause_owner", "main_app"),
+            "com.solappan.agent.permission.INVOKE_ASSISTANT")
+    }
+    LaunchedEffect(foreground, wakeEnabled) {
+        if (foreground && wakeEnabled) {
+            delay(2_000)
+            while (wakeEnabled) {
+                if (!isWakeServiceRunning(context)) {
+                    wakeEnabled = false
+                    localError = "Hey SOL stopped. Check its notification for details, then enable it again."
+                    break
+                }
+                delay(2_000)
+            }
+        }
+    }
     DisposableEffect(context) {
         val engine = TextToSpeech(context.applicationContext) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
@@ -204,7 +268,7 @@ private fun SolChatScreen() {
         }
     }
     LaunchedEffect(runtimeState.loading, runtimeState.response, runtimeState.error, ttsReady) {
-        if (!runtimeState.loading && ttsReady) {
+        if (!runtimeState.loading && ttsReady && foreground && !speechActive) {
             val spoken = runtimeState.response.ifBlank { runtimeState.error.orEmpty() }.takeIf(String::isNotBlank)
             if (spoken != null && spoken != lastSpoken) {
                 lastSpoken = spoken
@@ -225,23 +289,54 @@ private fun SolChatScreen() {
     fun submit() {
         if (runtimeState.loading || goal.isBlank()) return
         val request = goal.trim()
+        keyboard?.hide()
+        ttsHolder[0]?.stop()
+        lastSpoken = ""
+        localError = null
+        if (submittedGoal.isNotBlank()) history = (history + ChatTurn(submittedGoal, runtimeState)).takeLast(20)
         submittedGoal = request
         goal = ""
         runtimeState = runtimeState.beginRun()
-        scope.launch {
-            withContext(Dispatchers.IO) {
-                runtime.run(
-                    goal = request,
-                    initialState = runtimeState,
-                    onState = { state -> withContext(Dispatchers.Main) { runtimeState = state } },
-                    requestConfirmation = { confirmation ->
-                        val decision = CompletableDeferred<Boolean>()
-                        withContext(Dispatchers.Main) { pendingApproval = PendingApproval(confirmation, decision) }
-                        decision.await().also { withContext(Dispatchers.Main) { pendingApproval = null } }
-                    },
-                )
-            }
+        runJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            try {
+                withContext(Dispatchers.IO) {
+                    runtime.run(
+                        goal = conversation.goal(request),
+                        initialState = runtimeState,
+                        onState = { state -> withContext(Dispatchers.Main) { runtimeState = state } },
+                        requestConfirmation = { confirmation ->
+                            val decision = CompletableDeferred<Boolean>()
+                            withContext(Dispatchers.Main) { pendingApproval = PendingApproval(confirmation, decision) }
+                            try { decision.await() } finally {
+                                decision.complete(false)
+                                withContext(NonCancellable + Dispatchers.Main) {
+                                    if (pendingApproval?.decision === decision) pendingApproval = null
+                                }
+                            }
+                        },
+                    )
+                }
+                conversation.remember(request, runtimeState.response.ifBlank { runtimeState.error.orEmpty() })
+            } catch (cancelled: CancellationException) {
+                runtimeState = runtimeState.copy(loading = false, agentState = AgentState.CANCELLED,
+                    response = "Stopped. Actions already completed cannot be undone.",
+                    timeline = runtimeState.timeline.map {
+                        if (it.status == TimelineStatus.RUNNING) it.copy(status = TimelineStatus.CANCELLED, message = "Stopped") else it
+                    })
+                throw cancelled
+            } finally { runJob = null }
         }
+    }
+
+    LaunchedEffect(voiceTranscript) {
+        voiceTranscript?.let {
+            goal = it
+            voiceTranscript = null
+            submit()
+        }
+    }
+    LaunchedEffect(submittedGoal, runtimeState.response, runtimeState.error, runtimeState.timeline.size) {
+        if (listState.layoutInfo.totalItemsCount > 0) listState.animateScrollToItem(listState.layoutInfo.totalItemsCount - 1)
     }
 
     fun toggleWakeWord() {
@@ -254,16 +349,26 @@ private fun SolChatScreen() {
             microphoneLauncher.launch(Manifest.permission.RECORD_AUDIO)
             return
         }
+        if (!android.service.voice.VoiceInteractionService.isActiveService(context,
+                android.content.ComponentName(context, com.solappan.agent.assistant.SolVoiceInteractionService::class.java))) {
+            showSetup = true
+            localError = "Select SOL as your default digital assistant before enabling Hey SOL."
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationGranted) {
             notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
         runCatching {
             context.startForegroundService(
-                Intent(context, SolWakeWordService::class.java).setAction(SolWakeWordService.ACTION_START),
+                Intent(context, SolWakeWordService::class.java).setAction(SolWakeWordService.ACTION_START)
+                    .putExtra("pause_owner", "main_app"),
             )
             wakeEnabled = true
-        }.onFailure { Log.w("SolWakeWord", "Wake service could not start", it) }
+        }.onFailure {
+            localError = "Could not start Hey SOL. Check microphone permission and default assistant in Setup."
+            Log.w("SolWakeWord", "Wake service could not start", it)
+        }
     }
 
     pendingApproval?.let { pending ->
@@ -277,10 +382,11 @@ private fun SolChatScreen() {
         )
     }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 18.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 18.dp)) {
         SolHeader(wakeEnabled, ::toggleWakeWord) { showSetup = !showSetup }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -308,7 +414,15 @@ private fun SolChatScreen() {
                     )
                 }
             }
-            if (submittedGoal.isBlank() && runtimeState.response.isBlank() && runtimeState.error == null) {
+            items(history) { turn ->
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ChatBubble(turn.goal, true)
+                    turn.state.error?.let { ChatBubble(it, false, true) }
+                    if (turn.state.response.isNotBlank()) ChatBubble(turn.state.response, false)
+                }
+            }
+            localError?.let { item { ChatBubble(it, false, true) } }
+            if (submittedGoal.isBlank() && history.isEmpty() && runtimeState.response.isBlank() && runtimeState.error == null) {
                 item { EmptyConversation() }
             } else {
                 if (submittedGoal.isNotBlank()) item { ChatBubble(submittedGoal, true) }
@@ -327,6 +441,12 @@ private fun SolChatScreen() {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(10.dp))
                 Text(stateLabel(runtimeState.agentState), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = {
+                    pendingApproval?.decision?.complete(false)
+                    pendingApproval = null
+                    runJob?.cancel()
+                    ttsHolder[0]?.stop()
+                }) { Text("Stop") }
             }
         }
 
@@ -338,7 +458,17 @@ private fun SolChatScreen() {
             OutlinedButton(
                 enabled = speechAvailable && !runtimeState.loading,
                 onClick = {
-                    if (microphoneGranted) speechLauncher.launch(speechIntent)
+                    if (microphoneGranted) {
+                        ttsHolder[0]?.stop()
+                        speechActive = true
+                        context.sendBroadcast(Intent(SolWakeWordService.ACTION_PAUSE).setPackage(context.packageName)
+                            .putExtra("pause_owner", "main_app"),
+                            "com.solappan.agent.permission.INVOKE_ASSISTANT")
+                        runCatching { speechLauncher.launch(speechIntent) }.onFailure {
+                            speechActive = false
+                            localError = "Voice input is unavailable. You can type your request."
+                        }
+                    }
                     else microphoneLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 },
             ) { Text("Mic") }
@@ -445,7 +575,8 @@ private fun SetupPanel(
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Setup", fontWeight = FontWeight.SemiBold)
-            Text(statusLine("Model", modelReady))
+            Text(statusLine("API key configured", modelReady))
+            Text(BuildConfig.OPENAI_MODEL, fontSize = 12.sp)
             Text(statusLine("Microphone", microphoneGranted))
             Text(statusLine("Contacts", contactsGranted))
             Text(statusLine("Default assistant", roleHeld))
@@ -471,7 +602,7 @@ private fun ApprovalDialog(
         onDismissRequest = { if (enabled) onCancel() },
         title = { Text("Approve action") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(request.summary)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = reviewed, onCheckedChange = onReviewed, enabled = enabled)

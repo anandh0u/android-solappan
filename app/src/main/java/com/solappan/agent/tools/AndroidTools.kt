@@ -16,6 +16,7 @@ import java.util.Locale
 
 internal abstract class ContextTool(protected val context: Context) : AgentTool {
     protected fun launch(intent: Intent): ToolResult = try {
+        if (Thread.currentThread().isInterrupted) throw InterruptedException()
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (intent.resolveActivity(context.packageManager) == null) {
             ToolResult.failure("No compatible Android application is installed.", "INTENT_UNAVAILABLE")
@@ -23,6 +24,9 @@ internal abstract class ContextTool(protected val context: Context) : AgentTool 
             context.startActivity(intent)
             ToolResult(success = true, message = "Android accepted the action.")
         }
+    } catch (interrupted: InterruptedException) {
+        Thread.currentThread().interrupt()
+        throw interrupted
     } catch (_: Exception) {
         ToolResult.failure("Android could not open the requested action.", "INTENT_FAILED")
     }
@@ -40,15 +44,20 @@ internal class OpenAppTool(context: Context) : ContextTool(context) {
         val packageManager = context.packageManager
         val normalized = appName.lowercase(Locale.ROOT).trim()
         val knownPackage = KNOWN_APPS[normalized]
-        val launchIntent = knownPackage?.let(packageManager::getLaunchIntentForPackage)
-            ?: packageManager.queryIntentActivities(
+        val knownIntent = knownPackage?.let(packageManager::getLaunchIntentForPackage)
+        val candidates = if (knownIntent == null) packageManager.queryIntentActivities(
                 Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
                 PackageManager.MATCH_ALL,
-            ).firstOrNull { info ->
-                info.loadLabel(packageManager).toString().lowercase(Locale.ROOT).let { label ->
-                    label == normalized || label.contains(normalized) || normalized.contains(label)
-                }
-            }?.activityInfo?.packageName?.let(packageManager::getLaunchIntentForPackage)
+            ).map { it.loadLabel(packageManager).toString().lowercase(Locale.ROOT) to it.activityInfo.packageName }
+            else emptyList()
+        val exact = candidates.filter { it.first == normalized }
+        val matchingPackages = exact.ifEmpty { candidates.filter { it.first.contains(normalized) } }
+            .map { it.second }.distinct()
+        if (knownIntent == null && matchingPackages.size > 1) {
+            return ToolResult.failure("More than one app matched '$appName'. Use its full app name.", "APP_AMBIGUOUS")
+        }
+        val launchIntent = knownIntent
+            ?: matchingPackages.singleOrNull()?.let(packageManager::getLaunchIntentForPackage)
             ?: return ToolResult.failure("Application '$appName' was not found.", "APP_NOT_FOUND")
 
         return launch(launchIntent).withSuccessDetails(
@@ -157,9 +166,9 @@ internal class FindContactTool(context: Context) : ContextTool(context) {
         }
         if (matches.isEmpty()) return ToolResult.failure("No contact matched '$query'.", "CONTACT_NOT_FOUND")
         val data = JSONArray().apply {
-            matches.forEach { put(JSONObject().put("contactId", it.id).put("name", it.name)) }
+            matches.distinctBy { it.id }.forEach { put(JSONObject().put("contactId", it.id).put("name", it.name)) }
         }
-        return ToolResult(true, "Found ${matches.size} contact match(es).", JSONObject().put("contacts", data))
+        return ToolResult(true, "Found ${data.length()} contact match(es).", JSONObject().put("contacts", data))
     }
 }
 

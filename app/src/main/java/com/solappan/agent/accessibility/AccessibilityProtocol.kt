@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.provider.Settings
 import java.util.UUID
+import java.io.File
 
 object AccessibilityProtocol {
     const val COMMAND_ACTION = "com.solappan.agent.ACCESSIBILITY_COMMAND"
@@ -18,8 +19,15 @@ object AccessibilityProtocol {
     const val EXTRA_MESSAGE = "message"
     const val EXTRA_ERROR = "error"
     const val EXTRA_DATA = "data"
+    const val EXTRA_DEADLINE = "deadline_elapsed"
 
     fun requestId(): String = UUID.randomUUID().toString()
+
+    // Shared app-private cancellation lease. A queued IPC command cannot outlive its caller.
+    fun commandLease(context: Context, requestId: String): File {
+        require(UUID.fromString(requestId).toString() == requestId)
+        return File(context.cacheDir, "accessibility-command-$requestId")
+    }
 
     fun isEnabled(context: Context): Boolean {
         val expected = ComponentName(context, SolAccessibilityService::class.java)

@@ -8,6 +8,9 @@
 - Confirm the contact “Afnan” exists.
 - Reset Solappan to the Idle state.
 - Keep the backup APK and recording available.
+- Read AUDIT.md before choosing optional demonstrations. Hey SOL phrase recognition and generic Chrome tap/type still need human/device qualification.
+- For voice: select SOL as default assistant, enable microphone, optionally enable Hey SOL and leave the app. Say the wake phrase separately, then the request. The assistant remains open; use Close SOL when finished.
+- Never share the local debug APK: it contains the developer API key. Release builds omit the key and require a secure gateway.
 
 ## 90-Second Demo
 

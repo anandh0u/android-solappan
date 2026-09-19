@@ -1,79 +1,52 @@
-# Solappan — Android Agent Runtime
-
-## Track
+# SOL — Agent Runtime for Android
 
 **Track 04 — Next-Gen Productivity & Automation**
 
-## One-Line Pitch
+## Pitch
 
-Solappan turns Android into a controlled tool environment where an AI agent can plan and execute multi-step mobile workflows with transparent progress and human approval.
+SOL turns a spoken or typed goal into a controlled Android workflow. A reasoning model selects registered tools; the Android runtime validates arguments, collects approvals, performs actions, and returns structured results.
 
-## Problem
+> “Set an alarm for 7 AM, navigate to GEC Thrissur, and prepare a message to Afnan saying I’ll meet him there.”
 
-AI models can reason about complex goals, but mobile assistants usually stop at conversation or isolated commands. Users still switch between apps, repeat context, find contacts, configure alarms, and prepare messages manually.
+One request connects multiple apps while keeping consequential actions under user control.
 
-## Solution
+## What we built
 
-The user describes an outcome once. The agent interprets the goal, selects allowlisted Android tools, validates parameters, executes native actions, reports structured results, and pauses for approval before consequential actions.
+- One shared agent pipeline for chat, Android system-assistant invocation, and optional Hey SOL.
+- Fourteen device tools: eight native/intent integrations and six optional accessibility tools.
+- A persistent assistant panel with spoken replies, follow-up listening, and explicit Close SOL.
+- Three recent text turns of in-memory context for follow-up requests.
+- Offline Vosk wake recognition, Android command recognition/TTS, and GPT-6 Astra reasoning.
+- A strict registry, bounded execution, parameter validation, explicit approval, cancellation, and visible failure results.
 
-```text
-USER GOAL
-   ↓
-UNDERSTAND + PLAN
-   ↓
-SELECT REGISTERED TOOLS
-   ↓
-VALIDATE + CHECK RISK
-   ↓
-EXECUTE ON ANDROID
-   ↓
-VERIFY RUNTIME RESULT
-   ↓
-COMPLETE OR RECOVER
-```
-
-## What Makes It Different
-
-This is not “ChatGPT can open apps.” It is an agent runtime with a reusable boundary between model reasoning and device execution:
-
-- The model decides what should happen.
-- The runtime decides what is allowed and how it happens.
-- Unknown tools and malformed arguments are rejected.
-- Phone numbers remain inside the Android runtime.
-- Calls and messages require in-app approval and final user action in the system app.
-
-## Working Tools
-
-- `open_app`
-- `open_maps`
-- `set_alarm`
-- `find_contact`
-- `call_contact`
-- `prepare_sms`
+Calls open the dialer and messages open drafts. The user performs the final Call or Send action. Screen observations describe visible state; they do not prove real-world completion.
 
 ## Demonstration
 
 1. “Open Spotify.”
-2. “Set an alarm for 7 AM tomorrow and navigate to GEC Thrissur.”
-3. “Find Afnan, prepare a message saying I will reach 20 minutes late, and open Maps to GEC Thrissur.”
+2. “Set an alarm for 7 AM and navigate to GEC Thrissur.”
+3. “Prepare a message to Afnan saying I will reach 20 minutes late.”
+4. Ask a follow-up, then say “Close SOL” during listening.
 
-The third scenario demonstrates planning, multiple tools, contact lookup, privacy-preserving data handling, explicit approval, and cross-app execution.
+Use the [demo script](DEMO_SCRIPT.md) and the [current audit](AUDIT.md) to select qualified paths. Accessibility tap/type and the replacement wake implementation require fresh physical-device qualification before being presented as verified.
 
-## Reliability
+## Why this fits Track 04
 
-- Twenty-two automated tests; see AUDIT.md and ISSUES.md for fresh versus historical device evidence
-- Repeated physical-device demo validation
-- Offline, permission-denied, missing-app, missing-contact, cancellation, and malformed-response testing
-- Bounded agent loop
-- One safe retry for rate-limit/server failures
-- No arbitrary model-generated code execution
+| Track theme | SOL implementation |
+| --- | --- |
+| Agent | A high-level goal drives iterative tool selection and result interpretation |
+| Automation | Multiple Android actions share one request and execution timeline |
+| Tools | Android APIs, intents, and restricted screen actions are registered capabilities |
+| Productivity | Less manual app switching, repeated input, and context copying |
 
-![Solappan running on Android](docs/screenshots/home.png)
+Codex was used to build and iteratively debug the Android runtime, integrations, and tests. The runtime exposes a controlled interface to the model; it never automatically executes model-generated code.
+
+## Evidence and limits
+
+The default model passed live text and structured-tool API checks. The combined debug build, 29 unit tests, lint and installation passed. Offline wake startup passed on the phone; human phrase and broader workflow checks remain open in [AUDIT.md](AUDIT.md). Earlier successful demos are historical evidence, not certification of the current build.
+
+This is a hackathon technical alpha. Production requires an authenticated model gateway, OEM wake/battery qualification, accessibility assurance, lifecycle/realtime work, and release/privacy hardening. The [GitHub roadmap](https://github.com/anandh0u/android-solappan/issues) tracks that work.
 
 ## Technology
 
-Kotlin, Jetpack Compose, Android native APIs and intents, Android Contacts Provider, Android speech recognition, and the OpenAI Responses API with structured function calling.
-
-## Future Direction
-
-Add outcome observation, selective app integrations, calendar/email productivity tools, and carefully sandboxed accessibility assistance. The allowlisted tool boundary and approval model remain unchanged as capabilities grow.
+Kotlin · Jetpack Compose · Android VoiceInteractionService · Native APIs and intents · Optional AccessibilityService · Vosk Android 0.3.75 · Android speech recognition/TTS · OpenAI Responses API

@@ -1,5 +1,29 @@
 # Hackathon Issues
 
+## Latest audit status — 2026-09-20
+
+This section supersedes historical completion claims below. Source repairs are implemented; final combined build/device evidence is recorded in AUDIT.md. A checked historical milestone is not proof of fresh regression or production readiness.
+
+- Repaired: automatic assistant dismissal; stale speech callbacks; missing conversation context; app cancellation/approval cleanup; repeating system-recognizer wake loop; competing microphone owners; mismatched accessibility traversals; stale observed targets; cancellation-blind queued accessibility actions; ambiguous app selection.
+- Model: GPT-6 Astra is available on the configured account and a live Responses smoke request completed. Low reasoning and sequential tools are configured.
+- Wake: offline Vosk model packaged. Human phrase/accent and long-running background tests remain necessary.
+- Calls use the dialer; SMS uses drafts. Neither auto-calling nor auto-sending is claimed. Music search is supported; exact-track autoplay is not guaranteed. Maps/alarm intent dispatch is not proof of a completed real-world outcome.
+- Not a production release: backend key protection, privacy review, multi-device validation and release qualification remain open.
+- Final automated evidence: 29 unit tests, debug assembly and lint pass; APK installed. Fresh Astra Open Spotify passed with foreground verification. Settings opened, but screen observation correctly reported Accessibility disabled; the user must re-enable SOL screen control for live tap/type/scroll qualification. The offline model loaded and began continuous recording outside the app. Human wake and multi-turn speech tests remain open.
+
+### GitHub follow-up backlog
+
+| Remaining work | Tracking |
+| --- | --- |
+| Secure API gateway, authentication, quotas, screen privacy/retention | [#1](https://github.com/anandh0u/android-solappan/issues/1) |
+| Low-power wake accuracy, battery, locked/OEM devices, audio routing | [#2](https://github.com/anandh0u/android-solappan/issues/2) |
+| App-specific accessibility safety, adversarial tests, verified outcomes | [#3](https://github.com/anandh0u/android-solappan/issues/3) |
+| Device regression, CI, signing, native alignment and store policy | [#4](https://github.com/anandh0u/android-solappan/issues/4) |
+| Notifications/calendar/email/WhatsApp, exact music playback, configurable wake phrase, local LLM and reviewed tool expansion | [#5](https://github.com/anandh0u/android-solappan/issues/5) |
+| Full-duplex voice, barge-in, encrypted optional history and state restoration | [#6](https://github.com/anandh0u/android-solappan/issues/6) |
+
+Coordinate tapping, unrestricted swipes, arbitrary generated-code execution, payments and security/destructive automation are not implemented. The first two need separate reviewed designs; the latter capabilities remain excluded from this MVP.
+
 ## P0 — Submission Blockers
 
 - [x] Android application builds successfully

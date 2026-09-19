@@ -1,37 +1,53 @@
 # Judge Q&A
 
-## Is this just a chatbot opening apps?
+## What makes SOL an agent?
 
-No. The model participates in a bounded execution loop: it selects registered tools, receives structured results, and continues planning across multiple actions. Android—not the model—owns validation, permissions, risk, and execution.
+The model selects registered tools in a bounded loop, receives structured results, and decides whether more steps are needed. Android owns validation, permissions, approval, and execution.
 
-## Why not use AccessibilityService for everything?
+## Why prefer native tools?
 
-Native APIs and intents are more deterministic, secure, and demo-reliable. Accessibility remains a future fallback for capabilities without native integration.
+Native APIs and intents offer clearer contracts than screen automation. Optional accessibility fills selected gaps through observation, scrolling, tapping, typing, Back, and Home. It remains app-dependent and requires explicit Android consent.
 
-## Can the model execute arbitrary code?
+## Can it run arbitrary generated code?
 
-No. Only tools in `ToolRegistry` can execute. Unknown names and invalid arguments return structured failures.
+No. Only registered tools execute. Unknown tools and invalid arguments fail before execution.
 
 ## What prevents accidental calls or messages?
 
-Protected tools carry risk metadata. `AgentController` pauses before execution, the user must check a separate review control, and `ToolRegistry` independently rejects execution without a confirmation grant. Calls open `ACTION_DIAL`, and messages open a draft via `ACTION_SENDTO`, so the user retains the final action.
+Protected actions pause for explicit approval, with a separate review checkbox. The registry independently requires a confirmation grant. Calls use the dialer and messages use a draft; the user retains the final Call or Send action.
 
-## Does the model see private phone numbers?
+## Does the model receive private phone numbers?
 
-No. Contact results expose an internal ID and display name. Number resolution stays inside the Android runtime.
+The contact lookup tool returns IDs and names, not raw numbers. Numbers are resolved inside Android. Explicit screen context can contain private visible information, so this is not a blanket privacy guarantee.
 
-## Why use OpenAI directly from the app?
+## Is Hey SOL fully offline?
 
-This is a local hackathon prototype. The key is excluded from Git, but a production release would route model access through an authenticated backend proxy.
+Wake phrase recognition uses Vosk and a bundled small English model on the device. Android command recognition may use its installed provider, and reasoning uses OpenAI over the network. The foreground wake service consumes microphone/battery resources and needs OEM qualification.
 
-## Why is Supabase not used?
+## Does the assistant stay open?
 
-The MVP does not require persistent cloud state. Avoiding an unnecessary backend improves reliability and keeps the demonstration focused on agentic mobile automation.
+The current implementation keeps the panel available after a command, speaks the answer, and offers a follow-up listening turn. Silence leaves Talk again available. Close SOL during listening, the Close SOL button, or Android dismissal ends the interaction.
+
+## Is this realtime voice?
+
+It is turn-based speech recognition followed by model reasoning and final-answer TTS. Full-duplex streaming, barge-in, and production audio routing are deferred work.
+
+## What does “verified” mean?
+
+An accepted Android intent establishes that the request was dispatched. Screen observation can confirm visible UI state. Neither proves every external outcome. The current [audit](AUDIT.md) separates code/build evidence, historical tests, and pending physical-device checks.
+
+## Is it production ready?
+
+No. It is a technical alpha. The local build contains private API configuration and must not be distributed with a key. Production needs an authenticated gateway, privacy/release work, lifecycle recovery, and broader device testing.
+
+## Why is Supabase not required?
+
+The current runtime does not require cloud persistence. Backend requirements should follow the authentication, credential isolation, and operational needs of a public release rather than the availability of credits.
 
 ## What happens offline?
 
-The request stops safely, the UI enters Failed state, and the user receives a clear network message. The app does not crash.
+The wake detector can still run locally. Model-driven workflows require connectivity and should show a readable failure. Fresh offline regression remains part of release qualification.
 
-## What would you build next?
+## What comes next?
 
-Outcome observation and verification, a small set of high-value productivity integrations such as calendar and email drafts, and selective accessibility assistance behind the same registry and approval boundary.
+The [GitHub issues](https://github.com/anandh0u/android-solappan/issues) track production gateway, wake/OEM qualification, accessibility assurance, realtime/lifecycle work, release qualification, and deferred integrations.

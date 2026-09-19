@@ -33,13 +33,20 @@ android {
         buildConfigField(
             "String",
             "OPENAI_MODEL",
-            quotedBuildValue(localProperties.getProperty("OPENAI_MODEL", "gpt-5-mini")),
+            quotedBuildValue(localProperties.getProperty("OPENAI_MODEL", "gpt-6-astra")),
         )
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // Never package the local developer credential in a distributable release APK.
+    buildTypes {
+        getByName("release") {
+            buildConfigField("String", "OPENAI_API_KEY", quotedBuildValue(""))
+        }
     }
 
     compileOptions {
@@ -53,6 +60,7 @@ android {
 }
 
 dependencies {
+    implementation("com.alphacephei:vosk-android:0.3.75")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.10.0")

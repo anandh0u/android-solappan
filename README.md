@@ -1,146 +1,100 @@
-# SOL — Agent Runtime for Android
+# SOL · Agent Runtime for Android
 
-SOL turns Android into a controlled tool environment for AI. From one spoken or typed goal, the model can plan a workflow, select registered tools, execute Android actions, request approval for consequential steps, inspect visible results, and report what actually happened.
+**Track 04 — Next-Gen Productivity & Automation**
 
-Built for **Track 04 — Next-Gen Productivity & Automation**.
+Give SOL a goal. It reasons through the task, chooses registered Android tools, asks for approval when needed, and reports the result.
 
-> This is not “a chatbot that can open apps.” It is an agent runtime that exposes safe, composable Android capabilities to a reasoning model.
+> “Set an alarm for 7 AM, navigate to GEC Thrissur, and prepare a message to Afnan saying I’ll meet him there.”
 
-## Experience
+Built with Codex, Kotlin, and Android native APIs. The model decides **what should happen**; the runtime decides **what is allowed and how it happens**.
 
-Invoke SOL with the Android assistant gesture, the SOL Quick Settings tile, or the optional **Hey SOL** listener. Speak naturally:
+[Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
 
-> “I’m leaving for college. Navigate to GEC Thrissur, set an alarm for 7 tomorrow, and prepare a message to Afnan saying I’ll meet him there.”
+## One goal, multiple actions
 
-The same agent pipeline handles text and voice:
-
-```text
-Goal → OpenAI reasoning → registered tool calls → validation/approval
-     → Android execution → observation → final spoken response
+```mermaid
+flowchart LR
+    A[Spoken or typed goal] --> B[Reason and select tools]
+    B --> C{Validate and check risk}
+    C -->|Protected action| D[User approval]
+    C -->|Low risk| E[Execute on Android]
+    D -->|Approved| E
+    D -->|Declined| G[Report result]
+    E --> F[Read result / observe visible UI]
+    F -->|More steps| B
+    F -->|Finished or blocked| G
+    G --> H[Display and speak answer]
 ```
 
-The app screen is intentionally minimal: SOL identity, conversation, microphone/send controls, wake toggle, and a collapsed Setup panel. The Android assistant uses a compact temporary surface rather than opening the normal app.
+## The experience
 
-## Current capabilities
+<p align="center"><img src="docs/screenshots/home.png" width="280" alt="SOL running on the connected Android phone" /></p>
 
-Native tools:
+- **Chat:** a focused SOL conversation, microphone, Send, Stop, and a compact Setup panel.
+- **System assistant:** invoke with the Android gesture or SOL Quick Settings tile. SOL stays open after a command; use **Close SOL**, or say “Close SOL” during an active listening turn.
+- **Follow-ups:** three recent text turns provide bounded, in-memory context. Screenshots and approval grants are not retained as conversation memory.
+- **Voice:** Android recognizes commands; Android TTS speaks final answers. After speech output, the assistant offers a follow-up listening turn. Silence leaves the panel available with **Talk again**.
+- **Optional wake phrase:** an offline Vosk listener with a bundled small English model listens for **Hey SOL** while its foreground service is enabled. Microphone ownership is coordinated with chat, assistant listening, and speech output.
 
-- `open_app`
-- `open_maps`
-- `set_alarm`
-- `find_contact`
-- `call_contact` — opens the dialer after approval; the user presses Call
-- `prepare_sms` — opens a draft after approval; the user presses Send
-- `search_music` — opens Spotify search results without claiming autoplay
-- `control_media` — play, pause, next, or previous through Android media controls
+Wake behavior is under fresh device validation. It is not an OEM low-power hotword implementation, and continuous use has a battery cost. The gesture and tile remain available.
 
-Optional accessibility fallback:
+## Fourteen registered device tools
 
-- `observe_screen`
-- `tap_element`
-- `type_text`
-- `scroll_screen`
-- `press_back`
-- `press_home`
+| Native APIs and intents | Optional screen control |
+| --- | --- |
+| `open_app`, `open_maps`, `set_alarm` | `observe_screen`, `scroll_screen` |
+| `find_contact`, `call_contact`, `prepare_sms` | `tap_element`, `type_text` |
+| `search_music`, `control_media` | `press_back`, `press_home` |
 
-Voice features:
+Calls open the dialer; messages open drafts. The user performs the final Call or Send action. Spotify search opens results and does not guarantee automatic playback. Screen control requires Android Accessibility consent and varies by app.
 
-- Android assistant role and temporary assistant UI
-- Android speech-to-text feeding the same `AgentController`
-- Spoken final responses through Android text-to-speech
-- Optional foreground **Hey SOL / Hello SOL / Okay SOL** listener
-- Quick Settings tile and normal assistant gesture remain reliable alternatives
+## Try a workflow
 
-## Setup on the phone
+1. “Open Spotify.”
+2. “Search Spotify for Starboy.”
+3. “Set an alarm for 7 AM and navigate to GEC Thrissur.”
+4. “Prepare a message to Afnan saying I’ll reach 20 minutes late.”
+5. Optional screen-control demo: “Open Chrome, observe the screen, tap the address bar, type Solappan agent demo, then observe again. Do not submit.”
 
-1. Open SOL and tap **Setup**.
-2. Confirm Model, Microphone, and Contacts are enabled.
-3. Select SOL as the default digital assistant.
-4. Enable optional screen control only if demonstrating accessibility automation.
-5. Tap **Hey SOL: Off** to enable the wake listener. Android shows a persistent low-priority notification while the microphone service is active.
+The fifth workflow remains a device qualification case; see the [audit](AUDIT.md) before presenting it as a verified demo.
 
-The wake listener uses Android’s speech recognizer and does **not** continuously upload microphone audio to OpenAI. It is experimental, consumes additional battery, and may be affected by OEM background restrictions. Turn it off from the SOL header or notification action when not needed.
+## Run locally
 
-## Safety model
+Use Android Studio, JDK 17, Android SDK 35, and an Android 8.0+ device. Physical-device testing is recommended.
 
-- Only registered tools execute.
-- Unknown tools and malformed/extra parameters are rejected.
-- The model cannot approve its own protected action.
-- Call, SMS, tap, and text-entry flows retain explicit user control.
-- Accessibility never replaces an available native API or intent.
-- Password fields, SOL’s own UI, ambiguous targets, and sensitive labels such as Send, Call, Pay, Delete, Allow, or Approve are blocked from generic accessibility actions.
-- Screen content is untrusted data, not instructions or authorization.
-- No arbitrary model-generated shell commands or code are executed.
-- Contact phone numbers stay inside the Android runtime.
-
-## Architecture
-
-```text
-Android assistant / Hey SOL / app text input
-                    ↓
-          AgentRuntimeCoordinator
-                    ↓
-             AgentController
-                    ↓
-          OpenAI Responses API
-                    ↓
-              ToolRegistry
-         ┌──────────┼──────────┐
-    Android APIs   Intents   Optional accessibility
-         └──────────┼──────────┘
-                    ↓
-            structured results
-```
-
-There is one reasoning and execution pipeline. Voice, wake invocation, the temporary assistant, and the Compose screen do not implement separate command parsers.
-
-## Local development
-
-Requirements:
-
-- Android Studio / Android SDK 35
-- JDK 17
-- Android 8.0+ device; a physical phone is recommended
-
-Create or update the Git-ignored `local.properties`:
+Add private configuration to the Git-ignored `local.properties`:
 
 ```properties
 OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5-mini
+OPENAI_MODEL=gpt-6-astra
 ```
 
-Build and verify:
+The current default is **GPT-6 Astra**, using low reasoning effort. Model availability was checked with a live API request during this audit. The wake engine uses **Vosk Android 0.3.75** with a bundled small English model; command reasoning still requires internet access.
 
 ```powershell
 .\gradlew.bat testDebugUnitTest assembleDebug lintDebug
 ```
 
-The direct API key is acceptable only for this local hackathon prototype. A public build must use a secured backend/proxy, authentication, rate limiting, and proper privacy/retention controls.
+On the phone, open **Setup**, grant microphone permission, choose SOL as the default assistant, and grant contacts only for contact workflows. Enable screen control only for accessibility tools. Enable Hey SOL explicitly; its persistent notification provides a Stop action.
 
-## Demo prompts
+Release builds deliberately omit the local key; they need a backend before they can reason. **Do not distribute a debug APK containing your API key.** Build-time configuration is for the local demonstration. Public distribution requires an authenticated server gateway and release hardening tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues).
 
-1. `Open Spotify.`
-2. `Search Spotify for Starboy.`
-3. `Set an alarm for 7 AM tomorrow and navigate to GEC Thrissur.`
-4. `Text Afnan saying I’ll reach 20 minutes late.`
-5. `Open Chrome, observe the screen, tap the address bar, type Solappan agent demo, then observe again. Do not submit.`
+## Runtime boundaries
 
-## Honest limitations
+Only registered tools execute. The registry rejects unknown tools and invalid arguments. Protected actions require explicit user approval; screen content cannot grant it. No model-generated code or shell commands run automatically.
 
-- Intent acceptance proves Android received a request, not that navigation started or an alarm was ultimately saved.
-- Spotify search routing is verified; automatic selection and playback of an exact result is not guaranteed.
-- Accessibility behavior varies by app, Android version, and manufacturer and remains experimental.
-- The wake phrase is an opt-in foreground service, not a production-grade low-power hotword engine.
-- Text-to-speech begins after the final model response; this is spoken response output, not full-duplex streaming audio.
-- Screen context sent for explicit screen questions may contain sensitive visible information. Local clearing does not delete provider-side API records.
-- There is no production backend, telemetry, account system, Play Store policy package, or release hardening.
+Contact lookup returns IDs and display names, keeping raw numbers out of its tool result. Explicit screen context can still contain private visible information. Password filtering is not comprehensive screenshot redaction. Local context clearing does not guarantee provider-side deletion.
 
-## Project documents
+Intent acceptance means Android received a request. It does not prove that an alarm was saved, navigation began, or music played. Screen observation verifies visible state, not real-world outcomes.
 
-- [Product requirements](PRD.md)
-- [Technical context](PROJECT.md)
-- [Build plan](BUILD_PLAN.md)
-- [Architecture decisions](DECISIONS.md)
-- [Issue and validation record](ISSUES.md)
-- [Submission pitch](SUBMISSION.md)
-- [Demo script](DEMO_SCRIPT.md)
+## Release status
+
+**Hackathon prototype / technical alpha.** The current audit repairs microphone contention, repeated wake activation, assistant lifetime, cancellation, and chat continuity. The combined debug build, 29 unit tests and lint pass; installation and offline wake-engine startup passed on the connected phone. Human spoken and cross-app regression checks remain open; [AUDIT.md](AUDIT.md) records evidence without equating earlier tests with current validation.
+
+Production work includes an authenticated model gateway, OEM/battery qualification, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These are tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues).
+
+## Explore the repository
+
+[Architecture](PROJECT.md) · [Product requirements](PRD.md) · [Decisions](DECISIONS.md) · [Validation history](ISSUES.md) · [Judge Q&A](JUDGES_QA.md)
+
+[Third-party notices](THIRD_PARTY_NOTICES.md) · [Official model migration guidance](https://developers.openai.com/api/docs/guides/latest-model/gpt-6-astra)

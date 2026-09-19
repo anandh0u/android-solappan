@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import android.os.SystemClock
 import com.solappan.agent.accessibility.AccessibilityProtocol
 import org.json.JSONArray
 import org.json.JSONObject
@@ -16,6 +17,7 @@ private class AccessibilityCommandClient(private val context: Context) {
     fun execute(command: String, extras: Map<String, String> = emptyMap()): ToolResult {
         var lastResult: ToolResult? = null
         repeat(if (command in ROOT_DEPENDENT_COMMANDS) ROOT_ATTEMPTS else 1) { attempt ->
+            if (Thread.currentThread().isInterrupted) throw InterruptedException()
             if (attempt > 0) Thread.sleep(OBSERVE_RETRY_DELAY_MS * attempt)
             val result = executeOnce(command, extras)
             lastResult = result
@@ -36,6 +38,7 @@ private class AccessibilityCommandClient(private val context: Context) {
             )
         }
         val requestId = AccessibilityProtocol.requestId()
+        val lease = AccessibilityProtocol.commandLease(context, requestId)
         val latch = CountDownLatch(1)
         var result: ToolResult? = null
         val receiver = object : BroadcastReceiver() {
@@ -73,15 +76,22 @@ private class AccessibilityCommandClient(private val context: Context) {
                 .setPackage(context.packageName)
                 .putExtra(AccessibilityProtocol.EXTRA_REQUEST_ID, requestId)
                 .putExtra(AccessibilityProtocol.EXTRA_COMMAND, command)
+                .putExtra(AccessibilityProtocol.EXTRA_DEADLINE, SystemClock.elapsedRealtime() + COMMAND_TIMEOUT_SECONDS * 1000)
             extras.forEach(intent::putExtra)
+            if (Thread.currentThread().isInterrupted) throw InterruptedException()
+            check(lease.createNewFile())
             context.sendBroadcast(intent, AccessibilityProtocol.PERMISSION)
             if (!latch.await(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 return ToolResult.failure("The accessibility service did not respond in time.", "ACCESSIBILITY_TIMEOUT")
             }
             return result ?: ToolResult.failure("The accessibility service returned no result.", "ACCESSIBILITY_ACTION_FAILED")
+        } catch (interrupted: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw interrupted
         } catch (_: Exception) {
             return ToolResult.failure("The accessibility command failed safely.", "ACCESSIBILITY_ACTION_FAILED")
         } finally {
+            lease.delete()
             runCatching { context.unregisterReceiver(receiver) }
         }
     }
