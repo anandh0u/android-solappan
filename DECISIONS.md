@@ -120,3 +120,11 @@ Status: Accepted
 `AgentController` remains the single reasoning and tool-execution pipeline. `AgentRuntimeCoordinator` converts its events and final result into UI-independent runtime state that can be consumed by both `MainActivity` and a future Android assistant session.
 
 Confirmation presentation remains entry-point-specific, but both entry points must pass the resulting user decision into the same controller callback and registry enforcement path.
+
+## ADR-014 — Android Voice Interaction as the System Entry Point
+
+Status: Accepted
+
+Solappan uses Android's supported `VoiceInteractionService`, `VoiceInteractionSessionService`, and `VoiceInteractionSession` APIs instead of a permanent overlay or Accessibility service for assistant invocation.
+
+The always-available interaction service and temporary session service run in dedicated application processes. MainActivity remains the setup/debug surface and requests the assistant role through the system-controlled `RoleManager` flow, with the OEM Digital Assistant settings page as a fallback.

@@ -80,6 +80,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P0.3 — Android assistant role integration
+
+Priority:
+
+P0
+
+Problem:
+
+Solappan could only be launched as a normal application and was not eligible for Android's system assistant role.
+
+Expected:
+
+Android recognizes Solappan as a digital-assistant candidate, MainActivity reports current role status, and the user can open the system-controlled role selection flow.
+
+Actual:
+
+The manifest now registers protected voice-interaction and session services with Android voice-interaction metadata. The setup UI reports role availability and ownership, requests the role through `RoleManager`, and falls back to the OEM Digital Assistant settings screen when necessary. Android listed “Solappan Agent” as a candidate, the role was selected on the connected phone, and `dumpsys voiceinteraction` reports Solappan's service and session service as active. The assistant session UI is intentionally deferred to P0.4.
+
+Status:
+
+COMPLETE
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:

@@ -43,5 +43,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".assistant.SolVoiceInteractionService"
+            android:exported="true"
+            android:label="Solappan"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":assistant_interactor">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/voice_interaction_service" />
+        </service>
+
+        <service
+            android:name=".assistant.SolVoiceInteractionSessionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":assistant_session" />
     </application>
 </manifest>

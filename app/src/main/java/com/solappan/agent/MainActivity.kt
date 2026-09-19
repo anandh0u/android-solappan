@@ -2,9 +2,12 @@ package com.solappan.agent
 
 import android.Manifest
 import android.app.Activity
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.speech.RecognizerIntent
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -112,6 +115,24 @@ private fun AgentScreen() {
     var contactsGranted by remember {
         mutableStateOf(context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED)
     }
+    val roleManager = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.getSystemService(RoleManager::class.java)
+        else null
+    }
+    val assistantRoleAvailable = remember(roleManager) {
+        roleManager?.isRoleAvailable(RoleManager.ROLE_ASSISTANT) == true
+    }
+    var assistantRoleHeld by remember(roleManager) {
+        mutableStateOf(roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true)
+    }
+    fun openAssistantSettings() {
+        runCatching { context.startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }
+            .onFailure { Log.w("SolappanAssistant", "Assistant settings are unavailable") }
+    }
+    val assistantRoleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        assistantRoleHeld = roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
+        if (!assistantRoleHeld) openAssistantSettings()
+    }
     val contactPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         contactsGranted = it
     }
@@ -164,6 +185,19 @@ private fun AgentScreen() {
             StatusPill("● Model ready", BuildConfig.OPENAI_API_KEY.isNotBlank())
             StatusPill("● Contacts", contactsGranted)
         }
+
+        AssistantRoleSetup(
+            available = assistantRoleAvailable,
+            held = assistantRoleHeld,
+            onRequestRole = {
+                runCatching {
+                    roleManager
+                        ?.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)
+                        ?.let(assistantRoleLauncher::launch)
+                        ?: openAssistantSettings()
+                }.onFailure { openAssistantSettings() }
+            },
+        )
 
         StateCard(agentState)
 
@@ -291,6 +325,33 @@ private fun AgentScreen() {
         if (response.isNotBlank()) {
             Text("Result", style = MaterialTheme.typography.titleMedium)
             Text(response)
+        }
+    }
+}
+
+@Composable
+private fun AssistantRoleSetup(
+    available: Boolean,
+    held: Boolean,
+    onRequestRole: () -> Unit,
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("ASSISTANT STATUS", style = MaterialTheme.typography.labelSmall)
+            Text(
+                when {
+                    held -> "✓ Selected as default assistant"
+                    available -> "⚠ Not selected as default assistant"
+                    else -> "Assistant role is not available on this device"
+                },
+                color = if (held) Color(0xFF75D8B7) else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (available && !held) {
+                OutlinedButton(onClick = onRequestRole) { Text("Set as Default Assistant") }
+            }
         }
     }
 }
