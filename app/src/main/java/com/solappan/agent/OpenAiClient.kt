@@ -20,6 +20,24 @@ class OpenAiClient(
         instructions: String,
         previousResponseId: String? = null,
     ): JSONObject {
+        repeat(MAX_REQUEST_ATTEMPTS) { attempt ->
+            try {
+                return createResponseOnce(input, tools, instructions, previousResponseId)
+            } catch (error: RetryableApiException) {
+                if (attempt == MAX_REQUEST_ATTEMPTS - 1) throw IOException(error.message, error)
+                Log.w(TAG, "Transient OpenAI failure; retrying once")
+                Thread.sleep(RETRY_DELAY_MS)
+            }
+        }
+        error("Model request retry loop ended unexpectedly.")
+    }
+
+    private fun createResponseOnce(
+        input: Any,
+        tools: JSONArray,
+        instructions: String,
+        previousResponseId: String?,
+    ): JSONObject {
         check(apiKey.isNotBlank()) {
             "OpenAI API key is missing. Add OPENAI_API_KEY to local.properties and rebuild."
         }
@@ -56,7 +74,9 @@ class OpenAiClient(
                 val message = runCatching {
                     JSONObject(responseBody).getJSONObject("error").optString("message")
                 }.getOrNull().orEmpty()
-                throw IOException(message.ifBlank { "OpenAI request failed (HTTP $status)." })
+                val safeMessage = message.ifBlank { "OpenAI request failed (HTTP $status)." }
+                if (status == 429 || status in 500..599) throw RetryableApiException(safeMessage)
+                throw IOException(safeMessage)
             }
 
             JSONObject(responseBody).also {
@@ -102,5 +122,9 @@ class OpenAiClient(
     private companion object {
         const val TAG = "OpenAiClient"
         const val RESPONSES_URL = "https://api.openai.com/v1/responses"
+        const val MAX_REQUEST_ATTEMPTS = 2
+        const val RETRY_DELAY_MS = 750L
     }
 }
+
+private class RetryableApiException(message: String) : IOException(message)

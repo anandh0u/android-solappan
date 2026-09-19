@@ -89,6 +89,7 @@ Only after the core MVP is stable:
 - Android Contacts API
 - OpenAI API
 - Structured tool calling
+- Optional Android speech-to-text input with text fallback
 
 ## Local Development
 
@@ -122,3 +123,5 @@ Before presenting, connect the phone to the internet, grant Contacts access, and
 3. `Find Afnan, prepare a message saying I will reach 20 minutes late, and open Maps to GEC Thrissur.`
 
 The third scenario pauses for explicit approval before opening the SMS draft. The user must still press Call or Send in the corresponding Android application.
+
+The **Speak** button uses Android's system speech recognizer to fill the same goal field. It does not create a separate voice-agent execution path and never runs a recognized goal automatically.

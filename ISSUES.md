@@ -52,7 +52,7 @@ COMPLETE — verified on the connected phone with a live Responses API request.
 - [x] Cancellation
 - [ ] Tool retry
 - [x] Better error messages
-- [ ] Voice input
+- [x] Voice input
 - [ ] Verification step
 - [x] Loading/processing indicators
 - [x] Improve confirmation UI
@@ -115,7 +115,7 @@ Debug builds and tests succeed, but Gradle prints a compatibility warning.
 
 Status:
 
-OPEN — non-blocking for the validated hackathon APK; upgrade after the demo to avoid destabilizing the working build.
+COMPLETE — the project now compiles and targets SDK 35, matching the supported range of Android Gradle Plugin 8.7.3. The compatibility warning is gone.
 
 ## Blocking Rule
 

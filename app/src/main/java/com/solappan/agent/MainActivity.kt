@@ -1,8 +1,11 @@
 package com.solappan.agent
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -111,6 +114,22 @@ private fun AgentScreen() {
     val contactPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         contactsGranted = it
     }
+    val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { goal = it }
+        }
+    }
+    val speechIntent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Describe an Android workflow")
+        }
+    }
+    val speechAvailable = remember { speechIntent.resolveActivity(context.packageManager) != null }
     val scope = rememberCoroutineScope()
 
     fun reset() {
@@ -173,6 +192,11 @@ private fun AgentScreen() {
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (speechAvailable && !loading) {
+                OutlinedButton(onClick = { speechLauncher.launch(speechIntent) }) {
+                    Text("Speak")
+                }
+            }
             Button(
                 modifier = Modifier.weight(1f),
                 enabled = !loading && goal.isNotBlank(),
