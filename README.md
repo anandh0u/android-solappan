@@ -2,6 +2,10 @@
 
 An agentic mobile automation runtime built for **Track 04 — Next-Gen Productivity & Automation** in a 12-hour Codex hackathon.
 
+![Solappan Android agent interface](docs/screenshots/home.png)
+
+Submission materials: [pitch](SUBMISSION.md) · [90-second demo](DEMO_SCRIPT.md) · [judge Q&A](JUDGES_QA.md)
+
 Solappan turns Android into a controlled tool environment for AI. It gives a reasoning model the ability to understand a natural-language goal, create a plan, select registered Android tools, execute actions, verify results, and keep the user in control of consequential actions.
 
 The differentiator is not that a chatbot can open apps. It is that Android capabilities become safe, composable tools for goal-driven automation.
@@ -95,7 +99,7 @@ Only after the core MVP is stable:
 
 Requirements:
 
-- Android Studio with Android SDK 36
+- Android Studio with Android SDK 35
 - JDK 17
 - Android device or emulator
 
@@ -122,6 +126,6 @@ Before presenting, connect the phone to the internet, grant Contacts access, and
 2. `Set an alarm for 7 AM tomorrow and navigate to GEC Thrissur.`
 3. `Find Afnan, prepare a message saying I will reach 20 minutes late, and open Maps to GEC Thrissur.`
 
-The third scenario pauses for explicit approval before opening the SMS draft. The user must still press Call or Send in the corresponding Android application.
+The third scenario pauses for explicit approval before opening the SMS draft. Check **I reviewed this action**, then tap **Approve action**. The user must still press Call or Send in the corresponding Android application.
 
 The **Speak** button uses Android's system speech recognizer to fill the same goal field. It does not create a separate voice-agent execution path and never runs a recognized goal automatically.

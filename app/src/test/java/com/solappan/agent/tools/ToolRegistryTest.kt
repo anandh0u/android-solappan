@@ -43,13 +43,17 @@ class ToolRegistryTest {
 
     @Test
     fun `protected tool produces confirmation metadata`() {
+        var executionCount = 0
         val protectedTool = object : AgentTool {
             override val name = "protected_test"
             override val description = "Protected test action"
             override val parameters = JSONObject("""{"type":"object","properties":{},"additionalProperties":false}""")
             override val riskLevel = RiskLevel.MEDIUM
             override val requiresConfirmation = true
-            override fun execute(arguments: JSONObject) = ToolResult(true, "executed")
+            override fun execute(arguments: JSONObject): ToolResult {
+                executionCount += 1
+                return ToolResult(true, "executed")
+            }
             override fun confirmationSummary(arguments: JSONObject) = "Approve protected test action"
         }
         val protectedRegistry = ToolRegistry(listOf(protectedTool))
@@ -59,6 +63,54 @@ class ToolRegistryTest {
         assertEquals("protected_test", confirmation?.toolName)
         assertEquals(RiskLevel.MEDIUM, confirmation?.riskLevel)
         assertEquals("Approve protected test action", confirmation?.summary)
+        assertEquals(0, executionCount)
+    }
+
+    @Test
+    fun `protected tool cannot execute without explicit confirmation`() {
+        var executed = false
+        val protectedTool = object : AgentTool {
+            override val name = "protected_test"
+            override val description = "Protected test action"
+            override val parameters = JSONObject("""{"type":"object","properties":{},"additionalProperties":false}""")
+            override val riskLevel = RiskLevel.MEDIUM
+            override val requiresConfirmation = true
+            override fun execute(arguments: JSONObject): ToolResult {
+                executed = true
+                return ToolResult(true, "executed")
+            }
+            override fun confirmationSummary(arguments: JSONObject) = "Approve protected test action"
+        }
+        val protectedRegistry = ToolRegistry(listOf(protectedTool))
+
+        val result = protectedRegistry.execute("protected_test", "{}")
+
+        assertFalse(result.success)
+        assertEquals("CONFIRMATION_REQUIRED", result.errorCode)
+        assertFalse(executed)
+    }
+
+    @Test
+    fun `protected tool executes after explicit confirmation`() {
+        var executed = false
+        val protectedTool = object : AgentTool {
+            override val name = "protected_test"
+            override val description = "Protected test action"
+            override val parameters = JSONObject("""{"type":"object","properties":{},"additionalProperties":false}""")
+            override val riskLevel = RiskLevel.MEDIUM
+            override val requiresConfirmation = true
+            override fun execute(arguments: JSONObject): ToolResult {
+                executed = true
+                return ToolResult(true, "executed")
+            }
+            override fun confirmationSummary(arguments: JSONObject) = "Approve protected test action"
+        }
+        val protectedRegistry = ToolRegistry(listOf(protectedTool))
+
+        val result = protectedRegistry.execute("protected_test", "{}", confirmationGranted = true)
+
+        assertTrue(result.success)
+        assertTrue(executed)
     }
 
     @Test

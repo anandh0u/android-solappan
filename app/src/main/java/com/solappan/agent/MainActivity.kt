@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -25,9 +26,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -36,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +55,7 @@ import com.solappan.agent.tools.ToolConfirmation
 import com.solappan.agent.tools.ToolRegistry
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -108,6 +113,8 @@ private fun AgentScreen() {
     var agentState by remember { mutableStateOf(AgentState.IDLE) }
     var timeline by remember { mutableStateOf<List<TimelineEntry>>(emptyList()) }
     var pendingApproval by remember { mutableStateOf<PendingApproval?>(null) }
+    var approvalReady by remember { mutableStateOf(false) }
+    var approvalReviewed by remember { mutableStateOf(false) }
     var contactsGranted by remember {
         mutableStateOf(context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED)
     }
@@ -131,6 +138,17 @@ private fun AgentScreen() {
     }
     val speechAvailable = remember { speechIntent.resolveActivity(context.packageManager) != null }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(pendingApproval) {
+        approvalReady = false
+        approvalReviewed = false
+        if (pendingApproval != null) {
+            // Prevent the gesture that launched a workflow from clicking through
+            // into a confirmation button when the layout changes underneath it.
+            delay(750)
+            approvalReady = true
+        }
+    }
 
     fun reset() {
         goal = ""
@@ -161,10 +179,15 @@ private fun AgentScreen() {
         pendingApproval?.let { pending ->
             ConfirmationCard(
                 request = pending.request,
+                actionsEnabled = approvalReady,
+                reviewed = approvalReviewed,
+                onReviewedChange = { approvalReviewed = it },
                 onCancel = {
+                    Log.i("SolappanApproval", "User denied ${pending.request.toolName}")
                     if (pending.decision.complete(false)) pendingApproval = null
                 },
                 onApprove = {
+                    Log.i("SolappanApproval", "User confirmed ${pending.request.toolName}")
                     if (pending.decision.complete(true)) pendingApproval = null
                 },
             )
@@ -239,9 +262,11 @@ private fun AgentScreen() {
                                 requestConfirmation = { request ->
                                     val decision = CompletableDeferred<Boolean>()
                                     withContext(Dispatchers.Main) {
+                                        Log.i("SolappanApproval", "Showing confirmation for ${request.toolName}")
                                         pendingApproval = PendingApproval(request, decision)
                                     }
-                                    decision.await().also {
+                                    decision.await().also { approved ->
+                                        Log.i("SolappanApproval", "Decision for ${request.toolName}: $approved")
                                         withContext(Dispatchers.Main) { pendingApproval = null }
                                     }
                                 },
@@ -407,20 +432,36 @@ private fun StateCard(state: AgentState) {
 @Composable
 private fun ConfirmationCard(
     request: ToolConfirmation,
+    actionsEnabled: Boolean,
+    reviewed: Boolean,
+    onReviewedChange: (Boolean) -> Unit,
     onCancel: () -> Unit,
     onApprove: () -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF35251E))) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Approval required", style = MaterialTheme.typography.titleLarge)
-            Text(request.summary)
-            Text("Risk: ${request.riskLevel.name}", style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(modifier = Modifier.weight(1f), onClick = onCancel) { Text("Cancel") }
-                Button(modifier = Modifier.weight(1f), onClick = onApprove) { Text("Approve action") }
+    AlertDialog(
+        onDismissRequest = { if (actionsEnabled) onCancel() },
+        title = { Text("Approval required") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(request.summary)
+                Text("Risk: ${request.riskLevel.name}", style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = reviewed,
+                        enabled = actionsEnabled,
+                        onCheckedChange = onReviewedChange,
+                    )
+                    Text("I reviewed this action")
+                }
             }
-        }
-    }
+        },
+        dismissButton = {
+            OutlinedButton(enabled = actionsEnabled, onClick = onCancel) { Text("Cancel") }
+        },
+        confirmButton = {
+            Button(enabled = actionsEnabled && reviewed, onClick = onApprove) { Text("Approve action") }
+        },
+    )
 }
 
 private fun stateLabel(state: AgentState): String = state.name

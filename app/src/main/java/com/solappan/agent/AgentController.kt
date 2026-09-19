@@ -39,7 +39,7 @@ class AgentController(
                         onEvent(AgentEvent.StateChanged(AgentState.WAITING_FOR_CONFIRMATION))
                         if (requestConfirmation(confirmation)) {
                             onEvent(AgentEvent.StateChanged(AgentState.EXECUTING))
-                            registry.execute(call.name, call.arguments)
+                            registry.execute(call.name, call.arguments, confirmationGranted = true)
                         } else {
                             actionCancelled = true
                             ToolResult.failure(

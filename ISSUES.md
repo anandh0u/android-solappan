@@ -58,6 +58,28 @@ COMPLETE — verified on the connected phone with a live Responses API request.
 - [x] Improve confirmation UI
 - [x] Demo reset functionality
 
+### SAFETY-001 — Prevent confirmation click-through
+
+Priority:
+
+P0
+
+Problem:
+
+A changing Compose layout could receive repeated activation at the confirmation button position during automated device testing.
+
+Expected:
+
+No protected tool can execute from a carried-over or repeated button activation.
+
+Actual:
+
+Protected tools now require a separately checked review control plus the approval button. The registry also rejects protected execution unless the controller supplies an explicit confirmation grant. Unit tests cover rejection and approved execution.
+
+Status:
+
+COMPLETE
+
 ### SESSION5-001 — Stabilization and demo validation
 
 Priority:

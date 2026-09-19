@@ -27,7 +27,11 @@ class ToolRegistry(tools: List<AgentTool>) {
         return ToolConfirmation(tool.name, tool.confirmationSummary(arguments), tool.riskLevel)
     }
 
-    fun execute(name: String, rawArguments: String): ToolResult {
+    fun execute(
+        name: String,
+        rawArguments: String,
+        confirmationGranted: Boolean = false,
+    ): ToolResult {
         val tool = find(name) ?: return ToolResult.failure(
             message = "Unknown tool '$name' was rejected.",
             errorCode = "UNKNOWN_TOOL",
@@ -38,6 +42,12 @@ class ToolRegistry(tools: List<AgentTool>) {
             return ToolResult.failure(
                 message = "Tool '$name' received malformed JSON arguments.",
                 errorCode = "INVALID_PARAMETERS",
+            )
+        }
+        if (tool.requiresConfirmation && !confirmationGranted) {
+            return ToolResult.failure(
+                message = "Tool '$name' requires explicit user confirmation.",
+                errorCode = "CONFIRMATION_REQUIRED",
             )
         }
         return try {

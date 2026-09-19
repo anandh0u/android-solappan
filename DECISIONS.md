@@ -104,3 +104,11 @@ Status: Accepted
 Contact search results sent back to the model contain only an internal contact ID and display name. Raw phone numbers remain inside the Android runtime and are resolved only when constructing a dialer or SMS intent.
 
 Calls use `ACTION_DIAL` rather than direct calling, and messages use an `ACTION_SENDTO` draft. The system application retains the final Call or Send action as defense in depth; the dedicated in-app approval flow remains a Session 4 requirement.
+
+## ADR-012 — Defense-in-Depth Confirmation
+
+Status: Accepted
+
+Consequential tools require two independent runtime conditions: the user checks a review control and taps the approval action, then `ToolRegistry` receives an explicit confirmation grant from `AgentController`.
+
+Calling a protected tool through the registry without that grant returns `CONFIRMATION_REQUIRED` and never reaches the Android intent.
