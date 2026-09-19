@@ -609,7 +609,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         private const val MAX_SCREENSHOT_EDGE_PX = 1280
         private const val SCREENSHOT_JPEG_QUALITY = 72
         private const val MAX_ASSIST_TEXT_CHARS = 4_000
-        private const val SCREEN_ACTION_WINDOW_DELAY_MS = 350L
+        private const val SCREEN_ACTION_WINDOW_DELAY_MS = 700L
         private val SCREEN_ACTION_TOOLS = setOf(
             "observe_screen", "tap_element", "type_text", "scroll_screen", "press_back", "press_home",
         )

@@ -19,7 +19,10 @@ private class AccessibilityCommandClient(private val context: Context) {
             if (attempt > 0) Thread.sleep(OBSERVE_RETRY_DELAY_MS * attempt)
             val result = executeOnce(command, extras)
             lastResult = result
-            if (result.errorCode != "SCREEN_UNAVAILABLE") return result
+            val safelyRetryable = result.errorCode == "SCREEN_UNAVAILABLE" ||
+                (command in ELEMENT_COMMANDS && result.errorCode == "ELEMENT_NOT_FOUND") ||
+                (command == "scroll" && result.errorCode == "SCROLL_UNAVAILABLE")
+            if (!safelyRetryable) return result
         }
         return lastResult ?: ToolResult.failure("No accessibility result was available.", "SCREEN_UNAVAILABLE")
     }
@@ -88,6 +91,7 @@ private class AccessibilityCommandClient(private val context: Context) {
         const val ROOT_ATTEMPTS = 4
         const val OBSERVE_RETRY_DELAY_MS = 350L
         val ROOT_DEPENDENT_COMMANDS = setOf("observe", "tap", "type", "scroll")
+        val ELEMENT_COMMANDS = setOf("tap", "type")
     }
 }
 
