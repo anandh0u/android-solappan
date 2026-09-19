@@ -4,10 +4,12 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.ContactsContract
 import android.provider.Telephony
+import android.view.KeyEvent
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -216,6 +218,45 @@ internal class PrepareSmsTool(context: Context) : ContextTool(context) {
             message = "Prepared an SMS to ${match.name}; the user must review and send it.",
             data = JSONObject().put("contactId", match.id).put("name", match.name),
         )
+    }
+}
+
+internal class ControlMediaTool(context: Context) : ContextTool(context) {
+    override val name = "control_media"
+    override val description =
+        "Control the active Android media session. Use only when the user asks to play, pause, skip to the next item, or return to the previous item."
+    override val parameters = JSONObject(
+        """{"type":"object","properties":{"action":{"type":"string","enum":["play","pause","next","previous"]}},"required":["action"],"additionalProperties":false}""",
+    )
+    override val riskLevel = RiskLevel.LOW
+    override val requiresConfirmation = false
+
+    override fun execute(arguments: JSONObject): ToolResult {
+        val action = requiredString(arguments, "action") ?: return invalid("action")
+        val keyCode = when (action) {
+            "play" -> KeyEvent.KEYCODE_MEDIA_PLAY
+            "pause" -> KeyEvent.KEYCODE_MEDIA_PAUSE
+            "next" -> KeyEvent.KEYCODE_MEDIA_NEXT
+            "previous" -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            else -> return ToolResult.failure(
+                "Unsupported media action '$action'.",
+                "INVALID_PARAMETERS",
+            )
+        }
+        val audioManager = context.getSystemService(AudioManager::class.java)
+            ?: return ToolResult.failure("Android media controls are unavailable.", "MEDIA_UNAVAILABLE")
+        return try {
+            val eventTime = android.os.SystemClock.uptimeMillis()
+            audioManager.dispatchMediaKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, keyCode, 0))
+            audioManager.dispatchMediaKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, keyCode, 0))
+            ToolResult(
+                success = true,
+                message = "Sent the $action command to the active media session.",
+                data = JSONObject().put("action", action),
+            )
+        } catch (_: Exception) {
+            ToolResult.failure("Android could not control the active media session.", "MEDIA_CONTROL_FAILED")
+        }
     }
 }
 

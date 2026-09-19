@@ -235,6 +235,21 @@ Risk:
 
 MEDIUM
 
+### control_media
+
+Input:
+
+- action: `play`, `pause`, `next`, or `previous`
+
+Behaviour:
+
+- dispatch a native Android media command to the active media session
+- reject unsupported actions
+
+Risk:
+
+LOW
+
 ## Security Requirements
 
 Never hardcode:

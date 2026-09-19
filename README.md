@@ -66,6 +66,7 @@ The MVP should support:
 - Set alarm
 - Open Maps/navigation
 - Prepare SMS/message
+- Control active media playback
 - Agent execution trace
 - Confirmation system
 - Error handling
@@ -131,3 +132,5 @@ The third scenario pauses for explicit approval before opening the SMS draft. Ch
 The **Speak** button uses Android's system speech recognizer to fill the same goal field. It does not create a separate voice-agent execution path and never runs a recognized goal automatically.
 
 When Solappan is selected as Android's digital assistant, invoke it by long-pressing the power button or tapping the **SOL** Quick Settings tile. The tile opens the same temporary assistant session and does not run a second agent pipeline. A custom always-listening wake word is not part of the current build.
+
+The optional `control_media` tool sends native Android media commands (`play`, `pause`, `next`, or `previous`) to the active media session. It does not automate Spotify's UI.

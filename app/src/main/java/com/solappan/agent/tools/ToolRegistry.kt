@@ -72,6 +72,7 @@ class ToolRegistry(tools: List<AgentTool>) {
                 FindContactTool(context),
                 CallContactTool(context),
                 PrepareSmsTool(context),
+                ControlMediaTool(context),
             ),
         )
     }

@@ -80,6 +80,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P1.2 — Native media control
+
+Priority:
+
+P1
+
+Problem:
+
+The agent could open a music application but could not control the active playback session.
+
+Expected:
+
+Spoken play, pause, next, and previous requests pass through the model, registered tool, and Android native media APIs without accessibility automation.
+
+Actual:
+
+The allowlisted `control_media` tool validates four exact actions and dispatches matching Android media-key events through `AudioManager`. The build and all tests pass. A physical-phone voice request from the assistant successfully changed Spotify playback.
+
+Status:
+
+COMPLETE
+
 ### ASSISTANT-P0.2 — Reusable agent execution state
 
 Priority:

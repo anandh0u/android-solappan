@@ -168,3 +168,11 @@ Status: Accepted
 The SOL Quick Settings tile sends an app-internal, non-exported broadcast to the active `VoiceInteractionService`, which calls Android's supported `showSession` API. This reliably opens the existing assistant session on the Nothing phone without a chooser, permanent overlay, duplicate agent pipeline, or background microphone.
 
 The tile is the reliable one-tap alternative to a custom wake word. Long-press power remains the primary system gesture.
+
+## ADR-020 — Native Media Commands Before App Automation
+
+Status: Accepted
+
+Music playback uses Android's `AudioManager` media-key dispatch rather than Spotify-specific UI automation. The registered `control_media` tool accepts only `play`, `pause`, `next`, and `previous`, rejects other arguments, and remains low risk.
+
+This keeps media control independent of a particular player and preserves the native-first architecture.
