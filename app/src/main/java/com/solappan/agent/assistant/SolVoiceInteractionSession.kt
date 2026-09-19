@@ -13,6 +13,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.service.voice.VoiceInteractionSession
 import android.util.Log
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,8 @@ import com.solappan.agent.AgentController
 import com.solappan.agent.AgentRuntimeCoordinator
 import com.solappan.agent.AgentRuntimeUiState
 import com.solappan.agent.AgentState
+import com.solappan.agent.TimelineEntry
+import com.solappan.agent.TimelineStatus
 import com.solappan.agent.tools.ToolRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +39,7 @@ import kotlinx.coroutines.withContext
 class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInteractionSession(sessionContext) {
     private lateinit var statusText: TextView
     private lateinit var transcriptText: TextView
+    private lateinit var timelineContainer: LinearLayout
     private lateinit var retryButton: Button
     private var speechRecognizer: SpeechRecognizer? = null
     private var listening = false
@@ -95,9 +99,23 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             text = "Invoke SOL and speak naturally"
             textSize = 14f
             gravity = Gravity.CENTER
+            maxLines = 3
+            ellipsize = TextUtils.TruncateAt.END
             setTextColor(Color.rgb(183, 174, 195))
         }
         panel.addView(transcriptText.withTopMargin(6))
+
+        timelineContainer = LinearLayout(sessionContext).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+        panel.addView(
+            timelineContainer,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(12) },
+        )
 
         retryButton = Button(sessionContext).apply {
             text = "Retry listening"
@@ -140,6 +158,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private fun startListening() {
         if (!::statusText.isInitialized) return
         retryButton.visibility = View.GONE
+        timelineContainer.removeAllViews()
+        timelineContainer.visibility = View.GONE
 
         if (sessionContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             showSpeechError("Microphone permission required", "Open Solappan and enable the assistant microphone.")
@@ -176,6 +196,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         listening = false
         statusText.text = title
         transcriptText.text = detail
+        timelineContainer.visibility = View.GONE
         retryButton.visibility = View.VISIBLE
     }
 
@@ -268,6 +289,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             state.response.isNotBlank() -> state.response
             else -> "“$transcript”"
         }
+        renderTimeline(state.timeline)
         if (!state.loading) {
             if (state.error != null) {
                 retryButton.visibility = View.VISIBLE
@@ -279,6 +301,39 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             }
         }
     }
+
+    private fun renderTimeline(entries: List<TimelineEntry>) {
+        timelineContainer.removeAllViews()
+        timelineContainer.visibility = if (entries.isEmpty()) View.GONE else View.VISIBLE
+        entries.takeLast(MAX_VISIBLE_TIMELINE_ITEMS).forEach { entry ->
+            val marker = when (entry.status) {
+                TimelineStatus.RUNNING -> "●"
+                TimelineStatus.SUCCESS -> "✓"
+                TimelineStatus.FAILED -> "!"
+                TimelineStatus.CANCELLED -> "×"
+            }
+            val color = when (entry.status) {
+                TimelineStatus.RUNNING -> Color.rgb(255, 155, 84)
+                TimelineStatus.SUCCESS -> Color.rgb(117, 216, 183)
+                TimelineStatus.FAILED, TimelineStatus.CANCELLED -> Color.rgb(255, 113, 106)
+            }
+            timelineContainer.addView(TextView(sessionContext).apply {
+                text = "$marker  ${entry.toolName.toDisplayName()} — ${entry.message}"
+                textSize = 13f
+                setTextColor(color)
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                setPadding(dp(12), dp(9), dp(12), dp(9))
+                background = roundedBackground(Color.rgb(37, 30, 53), 12)
+            }, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { bottomMargin = dp(6) })
+        }
+    }
+
+    private fun String.toDisplayName(): String =
+        split('_').joinToString(" ") { word -> word.replaceFirstChar(Char::uppercase) }
 
     private fun TextView.withTopMargin(margin: Int): TextView = apply {
         layoutParams = LinearLayout.LayoutParams(
@@ -298,5 +353,6 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     companion object {
         private const val TAG = "SolAssistantSession"
+        private const val MAX_VISIBLE_TIMELINE_ITEMS = 4
     }
 }

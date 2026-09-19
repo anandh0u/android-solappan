@@ -168,6 +168,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P0.7 — Assistant progress and tool timeline
+
+Priority:
+
+P0
+
+Problem:
+
+The assistant showed only a broad agent state and final response, so users could not see which registered Android tools were running or had completed.
+
+Expected:
+
+The assistant observes `AgentRuntimeUiState` and displays existing agent states plus a compact timeline for running, successful, failed, and cancelled tools.
+
+Actual:
+
+The native assistant panel now renders up to four recent entries from the shared runtime timeline with distinct state markers and colors. Transcript/result text is bounded to keep the temporary surface compact. The build and all tests pass, and the updated assistant session launches without crashing. A spoken tool run still needs one manual visual check because no speech reached the phone during the final automated test window.
+
+Status:
+
+WORKING — implementation is stable; live timeline visibility awaits manual confirmation.
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:
