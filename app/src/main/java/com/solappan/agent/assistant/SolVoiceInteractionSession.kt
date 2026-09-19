@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -27,9 +28,12 @@ import com.solappan.agent.AgentRuntimeUiState
 import com.solappan.agent.AgentState
 import com.solappan.agent.TimelineEntry
 import com.solappan.agent.TimelineStatus
+import com.solappan.agent.tools.ToolConfirmation
 import com.solappan.agent.tools.ToolRegistry
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -40,10 +44,17 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private lateinit var statusText: TextView
     private lateinit var transcriptText: TextView
     private lateinit var timelineContainer: LinearLayout
+    private lateinit var confirmationContainer: LinearLayout
+    private lateinit var confirmationSummary: TextView
+    private lateinit var confirmationReview: CheckBox
+    private lateinit var cancelButton: Button
+    private lateinit var approveButton: Button
     private lateinit var retryButton: Button
     private var speechRecognizer: SpeechRecognizer? = null
     private var listening = false
     private var uiVisible = false
+    private var pendingConfirmation: CompletableDeferred<Boolean>? = null
+    private var confirmationArmJob: Job? = null
     private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val runtime = AgentRuntimeCoordinator(
         AgentController(registry = ToolRegistry.sessionThree(sessionContext.applicationContext)),
@@ -117,6 +128,66 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             ).apply { topMargin = dp(12) },
         )
 
+        confirmationContainer = LinearLayout(sessionContext).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = roundedBackground(Color.rgb(48, 36, 55), 16)
+            visibility = View.GONE
+        }
+        confirmationContainer.addView(TextView(sessionContext).apply {
+            text = "APPROVAL REQUIRED"
+            textSize = 12f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.rgb(255, 155, 84))
+        })
+        confirmationSummary = TextView(sessionContext).apply {
+            textSize = 15f
+            setTextColor(Color.rgb(243, 238, 247))
+        }
+        confirmationContainer.addView(confirmationSummary.withTopMargin(8))
+        confirmationReview = CheckBox(sessionContext).apply {
+            text = "I reviewed this action"
+            textSize = 14f
+            setTextColor(Color.rgb(243, 238, 247))
+            isEnabled = false
+            setOnCheckedChangeListener { _, checked ->
+                approveButton.isEnabled = isEnabled && checked
+            }
+        }
+        confirmationContainer.addView(confirmationReview.withTopMargin(8))
+        val confirmationActions = LinearLayout(sessionContext).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END
+        }
+        cancelButton = Button(sessionContext).apply {
+            text = "Cancel"
+            isAllCaps = false
+            isEnabled = false
+            setOnClickListener { resolveConfirmation(false) }
+        }
+        confirmationActions.addView(cancelButton)
+        approveButton = Button(sessionContext).apply {
+            text = "Approve action"
+            isAllCaps = false
+            isEnabled = false
+            setOnClickListener { resolveConfirmation(true) }
+        }
+        confirmationActions.addView(approveButton)
+        confirmationContainer.addView(
+            confirmationActions,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(8) },
+        )
+        panel.addView(
+            confirmationContainer,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(12) },
+        )
+
         retryButton = Button(sessionContext).apply {
             text = "Retry listening"
             isAllCaps = false
@@ -144,11 +215,14 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     override fun onHide() {
         uiVisible = false
         stopListening()
+        resolveConfirmation(false)
         Log.i(TAG, "Assistant session hidden")
         super.onHide()
     }
 
     override fun onDestroy() {
+        resolveConfirmation(false)
+        confirmationArmJob?.cancel()
         sessionScope.cancel()
         speechRecognizer?.destroy()
         speechRecognizer = null
@@ -157,6 +231,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     private fun startListening() {
         if (!::statusText.isInitialized) return
+        resolveConfirmation(false)
         retryButton.visibility = View.GONE
         timelineContainer.removeAllViews()
         timelineContainer.visibility = View.GONE
@@ -264,11 +339,44 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
                     onState = { state ->
                         withContext(Dispatchers.Main) { renderRuntimeState(state, transcript) }
                     },
-                    // Assistant confirmation arrives in P0.9. Until then, protected tools fail closed.
-                    requestConfirmation = { false },
+                    requestConfirmation = { request -> requestAssistantConfirmation(request) },
                 )
             }
         }
+    }
+
+    private suspend fun requestAssistantConfirmation(request: ToolConfirmation): Boolean =
+        withContext(Dispatchers.Main) {
+            pendingConfirmation?.complete(false)
+            val decision = CompletableDeferred<Boolean>()
+            pendingConfirmation = decision
+            confirmationArmJob?.cancel()
+            confirmationSummary.text = "${request.summary}\nRisk: ${request.riskLevel.name}"
+            confirmationReview.isChecked = false
+            confirmationReview.isEnabled = false
+            cancelButton.isEnabled = false
+            approveButton.isEnabled = false
+            confirmationContainer.visibility = View.VISIBLE
+            statusText.text = "Approval required"
+            confirmationArmJob = sessionScope.launch {
+                delay(CONFIRMATION_ARM_DELAY_MS)
+                if (pendingConfirmation === decision && uiVisible) {
+                    confirmationReview.isEnabled = true
+                    cancelButton.isEnabled = true
+                }
+            }
+            decision.await()
+        }
+
+    private fun resolveConfirmation(approved: Boolean) {
+        val decision = pendingConfirmation ?: return
+        if (approved && (!confirmationReview.isEnabled || !confirmationReview.isChecked)) return
+        pendingConfirmation = null
+        confirmationArmJob?.cancel()
+        confirmationArmJob = null
+        confirmationContainer.visibility = View.GONE
+        confirmationReview.isChecked = false
+        decision.complete(approved)
     }
 
     private fun renderRuntimeState(state: AgentRuntimeUiState, transcript: String) {
@@ -354,5 +462,6 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     companion object {
         private const val TAG = "SolAssistantSession"
         private const val MAX_VISIBLE_TIMELINE_ITEMS = 4
+        private const val CONFIRMATION_ARM_DELAY_MS = 750L
     }
 }

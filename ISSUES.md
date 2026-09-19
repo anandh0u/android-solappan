@@ -212,6 +212,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P0.9 — Protected-action confirmation in assistant
+
+Priority:
+
+P0
+
+Problem:
+
+Protected call and SMS tools failed closed from assistant invocation because the temporary assistant surface could not collect an explicit user decision.
+
+Expected:
+
+The assistant displays the proposed action and risk, prevents click-through, supports cancellation and approval, and denies pending actions when its lifecycle ends.
+
+Actual:
+
+The native assistant panel now requires a 750 ms arming delay, a separate review checkbox, and an approval button. Cancelled call and SMS requests execute nothing; an approved call opens the system dialer. Approved SMS drafts target Android's default SMS package and bring its task forward while leaving Send under user control. Session hide, dismiss, retry, and destruction complete pending confirmations as denied. Registry enforcement remains unchanged and independent.
+
+Status:
+
+COMPLETE
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:

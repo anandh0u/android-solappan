@@ -152,3 +152,11 @@ Status: Accepted
 Final assistant transcripts are submitted to the same `AgentRuntimeCoordinator`, `AgentController`, and `ToolRegistry` used by MainActivity. No keyword command parser or alternate voice-agent logic is permitted.
 
 Protected tool requests from the assistant fail closed until the assistant-specific confirmation UI is implemented. Low-risk completed workflows dismiss the temporary session after a short visible completion delay.
+
+## ADR-018 — Assistant Confirmation Fails Closed
+
+Status: Accepted
+
+The assistant session presents protected tool requests inside its native temporary surface. Approval requires a separately enabled review checkbox followed by the approval button, with a short arming delay to prevent click-through.
+
+Hiding, dismissing, restarting, or destroying the session resolves any pending decision as denied. An approved decision still passes through `AgentController` and the independent `ToolRegistry` confirmation gate. Calls open `ACTION_DIAL` and SMS actions open a draft in Android's default messaging package; the user retains the final Call or Send action.

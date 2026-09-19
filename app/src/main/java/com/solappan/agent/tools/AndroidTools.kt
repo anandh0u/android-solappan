@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.ContactsContract
+import android.provider.Telephony
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -209,6 +210,8 @@ internal class PrepareSmsTool(context: Context) : ContextTool(context) {
         val match = matches.single()
         val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${Uri.encode(match.number)}"))
             .putExtra("sms_body", message)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        Telephony.Sms.getDefaultSmsPackage(context)?.let(intent::setPackage)
         return launch(intent).copy(
             message = "Prepared an SMS to ${match.name}; the user must review and send it.",
             data = JSONObject().put("contactId", match.id).put("name", match.name),
