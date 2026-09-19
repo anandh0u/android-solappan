@@ -53,6 +53,7 @@ data class AgentRuntimeUiState(
 class AgentRuntimeCoordinator(private val controller: AgentController) {
     suspend fun run(
         goal: String,
+        imageDataUrl: String? = null,
         initialState: AgentRuntimeUiState = AgentRuntimeUiState(),
         onState: suspend (AgentRuntimeUiState) -> Unit,
         requestConfirmation: suspend (ToolConfirmation) -> Boolean,
@@ -62,6 +63,7 @@ class AgentRuntimeCoordinator(private val controller: AgentController) {
 
         val result = controller.run(
             goal = goal,
+            imageDataUrl = imageDataUrl,
             onEvent = { event ->
                 state = state.apply(event)
                 onState(state)

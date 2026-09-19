@@ -12,13 +12,29 @@ class AgentController(
 ) {
     suspend fun run(
         goal: String,
+        imageDataUrl: String? = null,
         onEvent: suspend (AgentEvent) -> Unit = {},
         requestConfirmation: suspend (ToolConfirmation) -> Boolean = { false },
     ): Result<AgentRun> {
         return try {
             require(goal.isNotBlank()) { "Enter a goal before sending." }
             onEvent(AgentEvent.StateChanged(AgentState.THINKING))
-            var response = client.createResponse(goal, registry.apiDefinitions(), INSTRUCTIONS)
+            val initialInput: Any = if (imageDataUrl == null) goal else JSONArray().put(
+                JSONObject()
+                    .put("role", "user")
+                    .put(
+                        "content",
+                        JSONArray()
+                            .put(JSONObject().put("type", "input_text").put("text", goal))
+                            .put(
+                                JSONObject()
+                                    .put("type", "input_image")
+                                    .put("image_url", imageDataUrl)
+                                    .put("detail", "low"),
+                            ),
+                    ),
+            )
+            var response = client.createResponse(initialInput, registry.apiDefinitions(), INSTRUCTIONS)
             val executedTools = mutableListOf<ToolExecution>()
             var actionCancelled = false
             onEvent(AgentEvent.StateChanged(AgentState.PLANNING))

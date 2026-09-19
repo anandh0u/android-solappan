@@ -176,3 +176,11 @@ Status: Accepted
 Music playback uses Android's `AudioManager` media-key dispatch rather than Spotify-specific UI automation. The registered `control_media` tool accepts only `play`, `pause`, `next`, and `previous`, rejects other arguments, and remains low risk.
 
 This keeps media control independent of a particular player and preserves the native-first architecture.
+
+## ADR-021 — Screen Context Is Explicit and Ephemeral
+
+Status: Accepted
+
+Screen understanding uses the context Android supplies to the active `VoiceInteractionSession`: a screenshot when available and assist-structure text as a native fallback. SOL attaches this context only when the spoken goal explicitly asks about the screen, limits and compresses it, treats extracted UI text as untrusted data, and discards it after one run.
+
+Image input is added only to the initial request of the existing Responses API and `AgentController` flow. If Android supplies neither source, the session reports that screen context is unavailable rather than inventing an answer. No MediaProjection, Accessibility service, permanent capture, or second model pipeline is introduced.

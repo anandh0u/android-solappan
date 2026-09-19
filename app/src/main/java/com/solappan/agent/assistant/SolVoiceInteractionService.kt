@@ -14,7 +14,12 @@ class SolVoiceInteractionService : VoiceInteractionService() {
     private val showAssistantReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == ACTION_SHOW_ASSISTANT) {
-                showSession(Bundle.EMPTY, VoiceInteractionSession.SHOW_SOURCE_APPLICATION)
+                showSession(
+                    Bundle.EMPTY,
+                    VoiceInteractionSession.SHOW_SOURCE_APPLICATION or
+                        VoiceInteractionSession.SHOW_WITH_ASSIST or
+                        VoiceInteractionSession.SHOW_WITH_SCREENSHOT,
+                )
             }
         }
     }

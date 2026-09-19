@@ -102,6 +102,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P1.3 — Explicit screen understanding
+
+Priority:
+
+P1
+
+Problem:
+
+The assistant could act on spoken goals but could not answer questions about the app visible underneath its temporary surface.
+
+Expected:
+
+An explicit screen question uses Android-provided context in the existing model pipeline, keeps unrelated commands text-only, and fails safely when capture is unavailable.
+
+Actual:
+
+The assistant requests Android assist data and supports both a compressed screenshot and bounded assist-structure text. Explicit screen phrases attach the ephemeral context to the first Responses API request; all other goals omit it. The phone delivered both sources over Wi-Fi Settings, and the user confirmed the spoken “What’s on my screen?” flow completed successfully. All screen context is discarded after the run.
+
+Status:
+
+COMPLETE
+
 ### ASSISTANT-P0.2 — Reusable agent execution state
 
 Priority:
@@ -346,8 +368,8 @@ COMPLETE
 
 ## P2 — Stretch Goals
 
-- [ ] Screenshot capture
-- [ ] Vision-based screen understanding
+- [x] Screenshot capture through assistant context
+- [x] Vision-based screen understanding
 - [ ] AccessibilityService
 - [ ] Tap UI element
 - [ ] Type text
