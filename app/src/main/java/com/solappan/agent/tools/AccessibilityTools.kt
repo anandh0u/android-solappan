@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 private class AccessibilityCommandClient(private val context: Context) {
     fun execute(command: String, extras: Map<String, String> = emptyMap()): ToolResult {
         var lastResult: ToolResult? = null
-        repeat(if (command == "observe") OBSERVE_ATTEMPTS else 1) { attempt ->
+        repeat(if (command in ROOT_DEPENDENT_COMMANDS) ROOT_ATTEMPTS else 1) { attempt ->
             if (attempt > 0) Thread.sleep(OBSERVE_RETRY_DELAY_MS * attempt)
             val result = executeOnce(command, extras)
             lastResult = result
@@ -85,8 +85,9 @@ private class AccessibilityCommandClient(private val context: Context) {
 
     private companion object {
         const val COMMAND_TIMEOUT_SECONDS = 4L
-        const val OBSERVE_ATTEMPTS = 4
+        const val ROOT_ATTEMPTS = 4
         const val OBSERVE_RETRY_DELAY_MS = 350L
+        val ROOT_DEPENDENT_COMMANDS = setOf("observe", "tap", "type", "scroll")
     }
 }
 

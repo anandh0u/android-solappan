@@ -427,11 +427,33 @@ Accessibility remains optional, exposes only bounded registered actions, cannot 
 
 Actual:
 
-The APK now registers an optional accessibility service and six tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home`. Cross-process commands use signature-protected package broadcasts. Observations exclude SOL windows and password values and are bounded to 80 nodes. Tap/type require normal runtime confirmation; the service also blocks consequential labels. Native tools remain preferred in model instructions. Build, 20 unit tests, lint, installation, manifest registration, and setup UI passed. After user enablement, one physical-phone workflow opened Settings, observed `com.android.settings`, scrolled semantically, observed again, pressed Back, and pressed Home. A first Chrome workflow exposed an Android window-publication race; `observe_screen` returned `SCREEN_UNAVAILABLE` even though Chrome appeared shortly afterward. Observation now retries that exact transient failure four times with bounded delays. The setup status refreshes when the activity resumes. Chrome retry and live tap/type validation remain OPEN.
+The APK now registers an optional accessibility service and six tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home`. Cross-process commands use signature-protected package broadcasts. Observations exclude SOL windows and password values and are bounded to 80 nodes. Tap/type require normal runtime confirmation; the service also blocks consequential labels. Native tools remain preferred in model instructions. Build, 20 unit tests, lint, installation, manifest registration, and setup UI passed. After user enablement, one physical-phone workflow opened Settings, observed `com.android.settings`, scrolled semantically, observed again, pressed Back, and pressed Home. A Chrome failure established that the full-screen voice-interaction window occluded the underlying app; retries alone could not fix it. The assistant now disables only its UI window during registered screen actions, restores it afterward, and selects only an active/focused foreign window. Matching is visible/enabled, exact-first, ambiguity-safe, password-aware, and checks sensitive resolved targets. Chrome retry and live tap/type validation remain OPEN.
 
 Status:
 
 WORKING — observe/scroll/Back/Home passed on-device; tap/type confirmation tests remain.
+
+### ASSISTANT-P1.5 — Spotify query routing
+
+Priority:
+
+P1
+
+Problem:
+
+Native media keys could resume or pause an active session but could not take a music query to Spotify results.
+
+Expected:
+
+A registered deterministic tool opens Spotify search for a user-provided query without falsely claiming playback.
+
+Actual:
+
+`search_music(query, provider="spotify")` uses Spotify's native search URI with a browser fallback. The schema rejects other providers and extra arguments. Model instructions keep search and playback/verification distinct. Build, tests, lint, and installation pass; physical-device result-page validation remains OPEN.
+
+Status:
+
+WORKING — implemented and installed; live Spotify result validation pending.
 
 ## Blocking Rule
 

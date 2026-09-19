@@ -101,6 +101,7 @@ class ToolRegistry(tools: List<AgentTool>) {
                 FindContactTool(context),
                 CallContactTool(context),
                 PrepareSmsTool(context),
+                SearchMusicTool(context),
                 ControlMediaTool(context),
                 ObserveScreenTool(context),
                 TapElementTool(context),

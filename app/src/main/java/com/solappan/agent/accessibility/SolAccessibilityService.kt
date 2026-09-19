@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
@@ -87,14 +88,18 @@ class SolAccessibilityService : AccessibilityService() {
         fun collect(node: AccessibilityNodeInfo, depth: Int) {
             if (visited >= MAX_NODES || depth > MAX_DEPTH) return
             visited++
+            if (!node.isVisibleToUser) return
             val text = if (node.isPassword) "" else node.text?.toString()?.trim().orEmpty()
             val description = if (node.isPassword) "" else node.contentDescription?.toString()?.trim().orEmpty()
+            val hint = if (node.isPassword) "" else node.hintText?.toString()?.trim().orEmpty()
             if (text.isNotEmpty() || description.isNotEmpty() || node.isClickable || node.isScrollable || node.isEditable) {
                 nodes.put(
                     JSONObject()
                         .put("text", text.take(MAX_TEXT_LENGTH))
                         .put("description", description.take(MAX_TEXT_LENGTH))
+                        .put("hint", hint.take(MAX_TEXT_LENGTH))
                         .put("viewId", node.viewIdResourceName.orEmpty())
+                        .put("class", node.className?.toString().orEmpty())
                         .put("clickable", node.isClickable)
                         .put("scrollable", node.isScrollable)
                         .put("editable", node.isEditable),
@@ -115,9 +120,17 @@ class SolAccessibilityService : AccessibilityService() {
         if (isSensitiveAccessibilityTarget(target)) {
             return ServiceResult(false, "That consequential UI action is blocked. Use a dedicated confirmed tool.", "SENSITIVE_ACTION_BLOCKED")
         }
-        val node = findNode(target) ?: return ServiceResult(false, "No visible element matched '$target'.", "ELEMENT_NOT_FOUND")
+        val root = controlledRoot()
+            ?: return ServiceResult(false, "No active Android window is available.", "SCREEN_UNAVAILABLE")
+        val matches = findNodes(root, target)
+        if (matches.isEmpty()) return ServiceResult(false, "No visible element matched '$target'.", "ELEMENT_NOT_FOUND")
+        if (matches.size > 1) return ServiceResult(false, "More than one visible element matched '$target'. Use a more specific target.", "ELEMENT_AMBIGUOUS")
+        val node = matches.single()
         val clickable = generateSequence(node) { it.parent }.firstOrNull(AccessibilityNodeInfo::isClickable)
             ?: return ServiceResult(false, "The matched element is not actionable.", "ELEMENT_NOT_ACTIONABLE")
+        if (hasSensitiveIdentityThrough(node, clickable)) {
+            return ServiceResult(false, "That consequential UI action is blocked. Use a dedicated confirmed tool.", "SENSITIVE_ACTION_BLOCKED")
+        }
         return if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
             ServiceResult(true, "Tapped the element matching '$target'.")
         } else ServiceResult(false, "Android rejected the tap action.", "ACCESSIBILITY_ACTION_FAILED")
@@ -125,9 +138,20 @@ class SolAccessibilityService : AccessibilityService() {
 
     private fun type(target: String, text: String): ServiceResult {
         if (target.isBlank() || text.isBlank()) return invalidTarget()
-        val node = findNode(target) ?: return ServiceResult(false, "No visible field matched '$target'.", "ELEMENT_NOT_FOUND")
+        if (isSensitiveAccessibilityTarget(target)) {
+            return ServiceResult(false, "That sensitive field is blocked.", "SENSITIVE_ACTION_BLOCKED")
+        }
+        val root = controlledRoot()
+            ?: return ServiceResult(false, "No active Android window is available.", "SCREEN_UNAVAILABLE")
+        val matches = findNodes(root, target)
+        if (matches.isEmpty()) return ServiceResult(false, "No visible field matched '$target'.", "ELEMENT_NOT_FOUND")
+        if (matches.size > 1) return ServiceResult(false, "More than one visible field matched '$target'. Use a more specific target.", "ELEMENT_AMBIGUOUS")
+        val node = matches.single()
         if (!node.isEditable || node.isPassword) {
             return ServiceResult(false, "The matched element is not an allowed editable field.", "ELEMENT_NOT_EDITABLE")
+        }
+        if (generateSequence(node) { it.parent }.take(MAX_ANCESTOR_CHECKS).any(::hasSensitiveIdentity)) {
+            return ServiceResult(false, "That sensitive field is blocked.", "SENSITIVE_ACTION_BLOCKED")
         }
         val arguments = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
@@ -161,29 +185,64 @@ class SolAccessibilityService : AccessibilityService() {
         if (performGlobalAction(action)) ServiceResult(true, message)
         else ServiceResult(false, "Android rejected the global action.", "ACCESSIBILITY_ACTION_FAILED")
 
-    private fun findNode(target: String): AccessibilityNodeInfo? {
+    private fun findNodes(root: AccessibilityNodeInfo, target: String): List<AccessibilityNodeInfo> {
         val normalized = target.trim().lowercase()
-        val root = controlledRoot() ?: return null
         val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+        val exact = mutableListOf<AccessibilityNodeInfo>()
+        val partial = mutableListOf<AccessibilityNodeInfo>()
         var visited = 0
         while (queue.isNotEmpty() && visited++ < MAX_NODES) {
             val node = queue.removeFirst()
-            val values = listOf(node.text, node.contentDescription, node.viewIdResourceName)
-                .mapNotNull { it?.toString()?.trim()?.lowercase()?.takeIf(String::isNotEmpty) }
-            if (values.any { it == normalized || it.contains(normalized) }) return node
             for (index in 0 until node.childCount) node.getChild(index)?.let(queue::addLast)
+            if (!node.isVisibleToUser || !node.isEnabled) continue
+            val values = listOf(node.text, node.contentDescription, node.hintText, node.viewIdResourceName)
+                .mapNotNull { it?.toString()?.trim()?.lowercase()?.takeIf(String::isNotEmpty) }
+            when {
+                values.any { it == normalized } -> exact += node
+                values.any { it.contains(normalized) } -> partial += node
+            }
         }
-        return null
+        return (exact.ifEmpty { partial }).distinctBy { it.windowId to it.hashCode() }
+    }
+
+    private fun hasSensitiveIdentity(node: AccessibilityNodeInfo): Boolean =
+        listOf(node.text, node.contentDescription, node.hintText, node.viewIdResourceName)
+            .mapNotNull { it?.toString()?.takeIf(String::isNotBlank) }
+            .any(::isSensitiveAccessibilityTarget)
+
+    private fun hasSensitiveIdentityThrough(
+        start: AccessibilityNodeInfo,
+        inclusiveEnd: AccessibilityNodeInfo,
+    ): Boolean {
+        var node: AccessibilityNodeInfo? = start
+        repeat(MAX_ANCESTOR_CHECKS) {
+            val current = node ?: return false
+            if (hasSensitiveIdentity(current)) return true
+            if (current == inclusiveEnd) return false
+            node = current.parent
+        }
+        return true
     }
 
     private fun invalidTarget() = ServiceResult(false, "A visible target and non-empty text are required.", "INVALID_PARAMETERS")
 
-    private fun controlledRoot(): AccessibilityNodeInfo? = windows
-        .asSequence()
-        .filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
-        .mapNotNull { it.root }
-        .firstOrNull { it.packageName?.toString() != packageName }
-        ?: rootInActiveWindow?.takeIf { it.packageName?.toString() != packageName }
+    private fun controlledRoot(): AccessibilityNodeInfo? {
+        val applicationWindows = windows
+            .filter {
+                it.type == AccessibilityWindowInfo.TYPE_APPLICATION && (it.isActive || it.isFocused)
+            }
+            .sortedByDescending { (if (it.isActive) 2 else 0) + (if (it.isFocused) 1 else 0) }
+        val selected = applicationWindows
+            .mapNotNull { it.root }
+            .firstOrNull { it.packageName?.toString() != packageName }
+        if (selected == null) {
+            val summary = windows.joinToString(limit = 8) { window ->
+                "type=${window.type},active=${window.isActive},focused=${window.isFocused}"
+            }
+            Log.w(TAG, "No controllable window. Windows: $summary")
+        }
+        return selected
+    }
 
     private data class ServiceResult(
         val success: Boolean,
@@ -196,5 +255,7 @@ class SolAccessibilityService : AccessibilityService() {
         const val MAX_NODES = 80
         const val MAX_DEPTH = 32
         const val MAX_TEXT_LENGTH = 160
+        const val MAX_ANCESTOR_CHECKS = 12
+        const val TAG = "SolAccessibility"
     }
 }

@@ -66,6 +66,7 @@ The MVP should support:
 - Set alarm
 - Open Maps/navigation
 - Prepare SMS/message
+- Open Spotify search results for a music query
 - Control active media playback
 - Agent execution trace
 - Confirmation system
@@ -133,7 +134,7 @@ The **Speak** button uses Android's system speech recognizer to fill the same go
 
 When Solappan is selected as Android's digital assistant, invoke it by long-pressing the power button or tapping the **SOL** Quick Settings tile. The tile opens the same temporary assistant session and does not run a second agent pipeline. A custom always-listening wake word is not part of the current build.
 
-The optional `control_media` tool sends native Android media commands (`play`, `pause`, `next`, or `previous`) to the active media session. It does not automate Spotify's UI.
+The `search_music` tool opens Spotify search results for a query, and `control_media` sends native Android media commands (`play`, `pause`, `next`, or `previous`) to the active media session. Neither action alone proves that a requested track began playing; visible verification or user selection is still required.
 
 For an explicit request such as **“What’s on my screen?”**, Android may provide the assistant with a one-time screenshot and assist-structure text. SOL sends that context to the existing Responses API request and discards it after the run. Ordinary commands do not upload screen context. Secure apps or OEM policy may return no screen data; SOL reports that instead of guessing.
 

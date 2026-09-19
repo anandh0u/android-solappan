@@ -261,6 +261,33 @@ internal class ControlMediaTool(context: Context) : ContextTool(context) {
     }
 }
 
+internal class SearchMusicTool(context: Context) : ContextTool(context) {
+    override val name = "search_music"
+    override val description =
+        "Open Spotify directly to search results for a song, artist, album, or playlist. This does not prove playback started."
+    override val parameters = JSONObject(
+        """{"type":"object","properties":{"query":{"type":"string"},"provider":{"type":"string","enum":["spotify"]}},"required":["query","provider"],"additionalProperties":false}""",
+    )
+    override val riskLevel = RiskLevel.LOW
+    override val requiresConfirmation = false
+
+    override fun execute(arguments: JSONObject): ToolResult {
+        val query = requiredString(arguments, "query") ?: return invalid("query")
+        if (arguments.optString("provider") != "spotify") return invalid("provider")
+        val spotifyIntent = Intent(Intent.ACTION_VIEW, Uri.parse("spotify:search:${Uri.encode(query)}"))
+            .setPackage("com.spotify.music")
+        val webIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://open.spotify.com/search/${Uri.encode(query)}"),
+        )
+        val intent = if (spotifyIntent.resolveActivity(context.packageManager) != null) spotifyIntent else webIntent
+        return launch(intent).withSuccessDetails(
+            message = "Opened Spotify search results for $query. Playback has not been verified.",
+            data = JSONObject().put("query", query).put("provider", "spotify"),
+        )
+    }
+}
+
 private fun objectSchema(property: String, description: String) = JSONObject()
     .put("type", "object")
     .put("properties", JSONObject().put(property, JSONObject().put("type", "string").put("description", description)))

@@ -202,3 +202,17 @@ SOL exposes bounded accessibility observation, semantic element taps, editable-f
 Tap and type use the existing confirmation gate. The accessibility service independently rejects SOL's own windows, password fields, and consequential targets such as approval, calls, sending, purchases, permissions, installation, and deletion. Observations are limited to 80 nodes and treat all screen text as untrusted. The service is optional and requires explicit Android Settings consent; disabled service errors are structured and do not affect the core MVP.
 
 This is observation-based verification, not proof of real-world outcomes. It can verify visible package/UI state after an action, but cannot prove that navigation started, a payment settled, a message sent, or another external effect completed.
+
+## ADR-024 — Assistant UI Yields During Screen Actions
+
+Status: Accepted
+
+Android implements a voice-interaction session as a full-screen window even when SOL draws only a compact panel. While that window is enabled, OEM accessibility exposes the SOL window and can omit the underlying application entirely. Waiting or retrying cannot recover a window that remains occluded.
+
+Immediately before a registered accessibility tool executes, the session temporarily disables only its UI window and waits briefly for Android to publish the underlying app. The agent coroutine and session remain alive. Confirmation is collected before this transition, and the panel is restored as soon as the tool finishes or the run reaches a terminal state. This does not weaken `ToolRegistry` confirmation enforcement.
+
+## ADR-025 — Music Search Is Honest Intent Routing
+
+Status: Accepted
+
+`search_music` opens Spotify search results through its native URI with a web fallback. It does not claim autoplay. Playback control remains a separate native media command, and visible screen observation may be used to verify only what the UI actually shows.

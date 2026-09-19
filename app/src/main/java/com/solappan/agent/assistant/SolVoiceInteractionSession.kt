@@ -405,7 +405,15 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
                     goal = modelGoal,
                     imageDataUrl = screenshotDataUrl,
                     onState = { state ->
-                        withContext(Dispatchers.Main) { renderRuntimeState(state, transcript) }
+                        val executingScreenAction = state.agentState == AgentState.EXECUTING &&
+                            state.timeline.any {
+                                it.status == TimelineStatus.RUNNING && it.toolName in SCREEN_ACTION_TOOLS
+                            }
+                        withContext(Dispatchers.Main) {
+                            setUiEnabled(!executingScreenAction)
+                            renderRuntimeState(state, transcript)
+                        }
+                        if (executingScreenAction) delay(SCREEN_ACTION_WINDOW_DELAY_MS)
                     },
                     requestConfirmation = { request -> requestAssistantConfirmation(request) },
                 )
@@ -601,6 +609,10 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         private const val MAX_SCREENSHOT_EDGE_PX = 1280
         private const val SCREENSHOT_JPEG_QUALITY = 72
         private const val MAX_ASSIST_TEXT_CHARS = 4_000
+        private const val SCREEN_ACTION_WINDOW_DELAY_MS = 350L
+        private val SCREEN_ACTION_TOOLS = setOf(
+            "observe_screen", "tap_element", "type_text", "scroll_screen", "press_back", "press_home",
+        )
         private val SCREEN_CONTEXT_PHRASES = listOf(
             "on my screen",
             "on the screen",
