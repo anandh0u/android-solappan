@@ -58,6 +58,28 @@ COMPLETE — verified on the connected phone with a live Responses API request.
 - [x] Improve confirmation UI
 - [x] Demo reset functionality
 
+### ASSISTANT-P0.2 — Reusable agent execution state
+
+Priority:
+
+P0
+
+Problem:
+
+`MainActivity` directly mapped every `AgentEvent` into loading, timeline, result, and error UI state, which would force a system-assistant entry point to duplicate that orchestration.
+
+Expected:
+
+The normal app and future assistant session can consume the same UI-independent execution state without changing `AgentController` or the tool pipeline.
+
+Actual:
+
+`AgentRuntimeCoordinator` now owns event-to-state mapping while `MainActivity` remains responsible for Compose controls and confirmation presentation. Fourteen unit tests pass, the APK installs, and the existing “Open Spotify” workflow was verified on the connected phone after the extraction.
+
+Status:
+
+COMPLETE
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:

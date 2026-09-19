@@ -87,14 +87,6 @@ private val SolappanColors = darkColorScheme(
     error = Color(0xFFFF716A),
 )
 
-private enum class TimelineStatus { RUNNING, SUCCESS, FAILED, CANCELLED }
-
-private data class TimelineEntry(
-    val toolName: String,
-    val message: String,
-    val status: TimelineStatus,
-)
-
 private data class PendingApproval(
     val request: ToolConfirmation,
     val decision: CompletableDeferred<Boolean>,
@@ -106,12 +98,14 @@ private fun AgentScreen() {
     val controller = remember(context) {
         AgentController(registry = ToolRegistry.sessionThree(context.applicationContext))
     }
+    val runtime = remember(controller) { AgentRuntimeCoordinator(controller) }
     var goal by remember { mutableStateOf("") }
-    var response by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var loading by remember { mutableStateOf(false) }
-    var agentState by remember { mutableStateOf(AgentState.IDLE) }
-    var timeline by remember { mutableStateOf<List<TimelineEntry>>(emptyList()) }
+    var runtimeState by remember { mutableStateOf(AgentRuntimeUiState()) }
+    val response = runtimeState.response
+    val error = runtimeState.error
+    val loading = runtimeState.loading
+    val agentState = runtimeState.agentState
+    val timeline = runtimeState.timeline
     var pendingApproval by remember { mutableStateOf<PendingApproval?>(null) }
     var approvalReady by remember { mutableStateOf(false) }
     var approvalReviewed by remember { mutableStateOf(false) }
@@ -152,10 +146,7 @@ private fun AgentScreen() {
 
     fun reset() {
         goal = ""
-        response = ""
-        error = null
-        timeline = emptyList()
-        agentState = AgentState.IDLE
+        runtimeState = AgentRuntimeUiState()
     }
 
     Column(
@@ -224,39 +215,14 @@ private fun AgentScreen() {
                 modifier = Modifier.weight(1f),
                 enabled = !loading && goal.isNotBlank(),
                 onClick = {
-                    loading = true
-                    response = ""
-                    error = null
-                    timeline = emptyList()
                     scope.launch {
-                        val result = withContext(Dispatchers.IO) {
-                            controller.run(
+                        withContext(Dispatchers.IO) {
+                            runtime.run(
                                 goal = goal.trim(),
-                                onEvent = { event ->
+                                initialState = runtimeState,
+                                onState = { state ->
                                     withContext(Dispatchers.Main) {
-                                        when (event) {
-                                            is AgentEvent.StateChanged -> agentState = event.state
-                                            is AgentEvent.ToolStarted -> timeline = timeline + TimelineEntry(
-                                                event.toolName,
-                                                "Starting",
-                                                TimelineStatus.RUNNING,
-                                            )
-                                            is AgentEvent.ToolFinished -> {
-                                                val index = timeline.indexOfLast {
-                                                    it.toolName == event.toolName && it.status == TimelineStatus.RUNNING
-                                                }
-                                                val status = when {
-                                                    event.errorCode == "USER_CANCELLED" -> TimelineStatus.CANCELLED
-                                                    event.success -> TimelineStatus.SUCCESS
-                                                    else -> TimelineStatus.FAILED
-                                                }
-                                                if (index >= 0) {
-                                                    timeline = timeline.toMutableList().also {
-                                                        it[index] = TimelineEntry(event.toolName, event.message, status)
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        runtimeState = state
                                     }
                                 },
                                 requestConfirmation = { request ->
@@ -272,11 +238,6 @@ private fun AgentScreen() {
                                 },
                             )
                         }
-                        result.fold(
-                            onSuccess = { response = it.finalText },
-                            onFailure = { error = it.message ?: "The request failed. Please try again." },
-                        )
-                        loading = false
                     }
                 },
             ) { Text(if (loading) "Running…" else "Run workflow") }

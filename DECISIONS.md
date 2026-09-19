@@ -112,3 +112,11 @@ Status: Accepted
 Consequential tools require two independent runtime conditions: the user checks a review control and taps the approval action, then `ToolRegistry` receives an explicit confirmation grant from `AgentController`.
 
 Calling a protected tool through the registry without that grant returns `CONFIRMATION_REQUIRED` and never reaches the Android intent.
+
+## ADR-013 — Shared Runtime State Above AgentController
+
+Status: Accepted
+
+`AgentController` remains the single reasoning and tool-execution pipeline. `AgentRuntimeCoordinator` converts its events and final result into UI-independent runtime state that can be consumed by both `MainActivity` and a future Android assistant session.
+
+Confirmation presentation remains entry-point-specific, but both entry points must pass the resulting user decision into the same controller callback and registry enforcement path.
