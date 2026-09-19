@@ -1,8 +1,10 @@
-# Android Agent Runtime
+# Solappan — Android Agent Runtime
 
-An experimental Android AI agent built for a 12-hour Codex hackathon.
+An agentic mobile automation runtime built for **Track 04 — Next-Gen Productivity & Automation** in a 12-hour Codex hackathon.
 
-The project gives an AI reasoning model the ability to understand a user's natural-language goal, create a plan, select registered Android tools, execute actions on the device, verify results, and keep the user in control of consequential actions.
+Solappan turns Android into a controlled tool environment for AI. It gives a reasoning model the ability to understand a natural-language goal, create a plan, select registered Android tools, execute actions, verify results, and keep the user in control of consequential actions.
+
+The differentiator is not that a chatbot can open apps. It is that Android capabilities become safe, composable tools for goal-driven automation.
 
 ## Core Idea
 
@@ -88,8 +90,35 @@ Only after the core MVP is stable:
 - OpenAI API
 - Structured tool calling
 
+## Local Development
+
+Requirements:
+
+- Android Studio with Android SDK 36
+- JDK 17
+- Android device or emulator
+
+Add the API key to the Git-ignored `local.properties` file:
+
+```properties
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=gpt-5-mini
+```
+
+Build with `./gradlew assembleDebug` (`gradlew.bat assembleDebug` on Windows). Never place API keys in committed source files. A direct client key is acceptable only for this local hackathon prototype; a deployed product should use a secured backend proxy.
+
 ## Build Philosophy
 
 Reliability is more important than number of features.
 
 Five tools that work every time are better than thirty tools that occasionally work.
+
+## Demo Runbook
+
+Before presenting, connect the phone to the internet, grant Contacts access, and ensure Spotify, Maps, Clock, and Messages are installed. Use these stable prompts:
+
+1. `Open Spotify.`
+2. `Set an alarm for 7 AM tomorrow and navigate to GEC Thrissur.`
+3. `Find Afnan, prepare a message saying I will reach 20 minutes late, and open Maps to GEC Thrissur.`
+
+The third scenario pauses for explicit approval before opening the SMS draft. The user must still press Call or Send in the corresponding Android application.

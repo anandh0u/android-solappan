@@ -2,39 +2,83 @@
 
 ## P0 — Submission Blockers
 
-- [ ] Android application builds successfully
-- [ ] Application launches without crashing
-- [ ] Text input works
-- [ ] OpenAI API connection works
-- [ ] API errors are handled
-- [ ] Tool calling works
-- [ ] Tool registry works
-- [ ] Unknown tools are rejected
-- [ ] Multiple tool calls can execute
-- [ ] `open_app` works
-- [ ] `open_maps` works
-- [ ] `set_alarm` works
-- [ ] `find_contact` works
-- [ ] `call_contact` works
-- [ ] Confirmation flow works
-- [ ] Agent execution state is visible
-- [ ] Demo Scenario 1 works
-- [ ] Demo Scenario 2 works
-- [ ] Demo Scenario 3 works
-- [ ] APK can be installed on demo phone
+- [x] Android application builds successfully
+- [x] Application launches without crashing
+- [x] Text input works
+- [x] OpenAI API connection works
+- [x] API errors are handled
+- [x] Tool calling works
+- [x] Tool registry works
+- [x] Unknown tools are rejected
+- [x] Multiple tool calls can execute
+- [x] `open_app` works
+- [x] `open_maps` works
+- [x] `set_alarm` works
+- [x] `find_contact` works
+- [x] `call_contact` works
+- [x] Confirmation flow works
+- [x] Agent execution state is visible
+- [x] Demo Scenario 1 works
+- [x] Demo Scenario 2 works
+- [x] Demo Scenario 3 works
+- [x] APK can be installed on demo phone
+
+### SESSION1-001 — Configure and verify OpenAI API key
+
+Priority:
+
+P0
+
+Problem:
+
+The app has no `OPENAI_API_KEY` in the local, Git-ignored configuration.
+
+Expected:
+
+A real prompt reaches the Responses API and the model response appears in the UI.
+
+Actual:
+
+The app safely displays a configuration error without crashing.
+
+Status:
+
+COMPLETE — verified on the connected phone with a live Responses API request.
 
 ## P1 — Important Improvements
 
-- [ ] Prepare SMS tool
-- [ ] Better execution timeline
-- [ ] Cancellation
+- [x] Prepare SMS tool
+- [x] Better execution timeline
+- [x] Cancellation
 - [ ] Tool retry
-- [ ] Better error messages
+- [x] Better error messages
 - [ ] Voice input
 - [ ] Verification step
-- [ ] Loading/processing indicators
-- [ ] Improve confirmation UI
-- [ ] Demo reset functionality
+- [x] Loading/processing indicators
+- [x] Improve confirmation UI
+- [x] Demo reset functionality
+
+### SESSION5-001 — Stabilization and demo validation
+
+Priority:
+
+P0
+
+Problem:
+
+The complete MVP required repeated device validation and recovery-path testing before submission.
+
+Expected:
+
+All three demo scenarios, approval/cancellation, missing resources, denied permission, malformed model output, and offline handling behave without crashes.
+
+Actual:
+
+All three demo scenarios passed on the connected phone. Failure paths produced structured, user-readable results. Automated tests pass and the APK installs successfully.
+
+Status:
+
+COMPLETE
 
 ## P2 — Stretch Goals
 
@@ -50,6 +94,28 @@
 - [ ] Codex-generated tool capability
 - [ ] Dynamic tool installation
 - [ ] Local model experimentation
+
+### BUILD-001 — Align Android Gradle plugin with compile SDK 36
+
+Priority:
+
+P1
+
+Problem:
+
+Android Gradle Plugin 8.7.3 reports that it was tested through compile SDK 35 while this project compiles against SDK 36.
+
+Expected:
+
+The build uses an Android Gradle plugin and Gradle wrapper combination officially tested with compile SDK 36.
+
+Actual:
+
+Debug builds and tests succeed, but Gradle prints a compatibility warning.
+
+Status:
+
+OPEN — non-blocking for the validated hackathon APK; upgrade after the demo to avoid destabilizing the working build.
 
 ## Blocking Rule
 

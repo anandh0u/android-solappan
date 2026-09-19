@@ -96,3 +96,11 @@ Core tools must remain stable.
 Status: Accepted
 
 Even if Codex-generated capability creation is implemented later, generated code must not automatically receive unrestricted execution privileges.
+
+## ADR-011 — Keep Contact Numbers Inside the Android Runtime
+
+Status: Accepted
+
+Contact search results sent back to the model contain only an internal contact ID and display name. Raw phone numbers remain inside the Android runtime and are resolved only when constructing a dialer or SMS intent.
+
+Calls use `ACTION_DIAL` rather than direct calling, and messages use an `ACTION_SENDTO` draft. The system application retains the final Call or Send action as defense in depth; the dedicated in-app approval flow remains a Session 4 requirement.

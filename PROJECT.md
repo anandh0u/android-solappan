@@ -10,6 +10,12 @@ The model does not directly control Android.
 
 All actions pass through a controlled tool registry.
 
+## Product Positioning
+
+This project is locked to **Track 04 — Next-Gen Productivity & Automation**.
+
+Its core claim is: **we built an agent runtime that turns Android into a tool environment for AI.** The model decides what should happen; the Android runtime validates what is allowed and determines how it happens.
+
 ## High-Level Architecture
 
 User

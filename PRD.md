@@ -4,9 +4,9 @@
 
 Temporary name:
 
-**Android Agent Runtime**
+**Solappan — Android Agent Runtime**
 
-Final branding can be decided after the MVP works.
+Track: **04 — Next-Gen Productivity & Automation**.
 
 ## 2. Problem
 
@@ -25,6 +25,15 @@ Create an Android agent runtime that turns natural-language goals into safe, str
 The model should not receive unrestricted Android control.
 
 Instead, Android capabilities are exposed as explicit registered tools.
+
+## 3.1 Track 04 Positioning
+
+- **Agent:** accepts high-level goals rather than isolated commands.
+- **Automation:** completes multi-step workflows across Android.
+- **Tools:** exposes Android functions through a controlled registry.
+- **Productivity:** reduces repetitive app switching and manual actions.
+
+The product is an agent runtime, not a general chatbot and not unrestricted device automation.
 
 ## 4. Primary User Flow
 

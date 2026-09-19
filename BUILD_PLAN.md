@@ -1,5 +1,13 @@
 # 12-Hour Build Plan
 
+## Locked Track and MVP
+
+Track: **04 — Next-Gen Productivity & Automation**.
+
+The core MVP is one text-driven agent screen, an OpenAI reasoning loop, a strict Android tool registry, multi-tool execution, visible progress, confirmation for consequential actions, structured failures, and five required Android tools: `open_app`, `open_maps`, `set_alarm`, `find_contact`, and `call_contact`. `prepare_sms` remains preferred after the required path is stable.
+
+Supabase, voice, accessibility automation, arbitrary generated-code execution, and additional tools are outside the locked MVP.
+
 ## Global Rule
 
 ONLY execute the current session.
@@ -77,14 +85,14 @@ Do not log secrets.
 
 ## Acceptance Criteria
 
-- [ ] Project compiles
-- [ ] APK launches
-- [ ] User can type
-- [ ] User can submit
-- [ ] API request succeeds
-- [ ] Model response displays
-- [ ] Network error does not crash app
-- [ ] API key is not committed
+- [x] Project compiles
+- [x] APK launches
+- [x] User can type
+- [x] User can submit
+- [x] API request succeeds
+- [x] Model response displays
+- [x] Network error does not crash app
+- [x] API key is not committed
 
 ## Stop Condition
 
@@ -193,14 +201,14 @@ It should NOT merely output that it would invoke the tool.
 
 ## Acceptance Criteria
 
-- [ ] Tool schema reaches model
-- [ ] Model calls mock tool
-- [ ] Tool executes
-- [ ] Tool result is returned
-- [ ] Unknown tool fails safely
-- [ ] Invalid parameters fail safely
-- [ ] Multiple tool calls are possible
-- [ ] Agent loop terminates correctly
+- [x] Tool schema reaches model
+- [x] Model calls mock tool
+- [x] Tool executes
+- [x] Tool result is returned
+- [x] Unknown tool fails safely
+- [x] Invalid parameters fail safely
+- [x] Multiple tool calls are possible
+- [x] Agent loop terminates correctly
 
 ## Stop Condition
 
@@ -306,14 +314,14 @@ Never assume permission exists.
 
 ## Acceptance Criteria
 
-- [ ] Agent can open an installed app
-- [ ] Agent can open Maps
-- [ ] Agent can configure alarm flow
-- [ ] Agent can search contacts
-- [ ] Agent can prepare call flow
-- [ ] Missing permission produces understandable UI
-- [ ] Missing app does not crash
-- [ ] Missing contact does not crash
+- [x] Agent can open an installed app
+- [x] Agent can open Maps
+- [x] Agent can configure alarm flow
+- [x] Agent can search contacts
+- [x] Agent can prepare call flow
+- [x] Missing permission produces understandable UI
+- [x] Missing app does not crash
+- [x] Missing contact does not crash
 
 ## Required End-to-End Test
 
@@ -404,14 +412,14 @@ Do not show raw stack traces.
 
 ## Acceptance Criteria
 
-- [ ] Current agent state visible
-- [ ] Tool progress visible
-- [ ] Completed actions marked
-- [ ] Failed actions clearly marked
-- [ ] User approval works
-- [ ] User cancellation works
-- [ ] Agent can return to idle state
-- [ ] Final result is visible
+- [x] Current agent state visible
+- [x] Tool progress visible
+- [x] Completed actions marked
+- [x] Failed actions clearly marked
+- [x] User approval works
+- [x] User cancellation works
+- [x] Agent can return to idle state
+- [x] Final result is visible
 
 ---
 
