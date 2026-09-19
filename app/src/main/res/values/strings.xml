@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Solappan Agent</string>
+    <string name="accessibility_service_description">Optional screen observation and controlled actions for SOL. Native Android tools remain preferred.</string>
+</resources>

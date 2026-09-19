@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.solappan.agent.accessibility.AccessibilityProtocol
 import com.solappan.agent.tools.ToolConfirmation
 import com.solappan.agent.tools.ToolRegistry
 import kotlinx.coroutines.CompletableDeferred
@@ -118,6 +119,9 @@ private fun AgentScreen() {
     var microphoneGranted by remember {
         mutableStateOf(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
     }
+    var accessibilityEnabled by remember {
+        mutableStateOf(AccessibilityProtocol.isEnabled(context))
+    }
     val roleManager = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.getSystemService(RoleManager::class.java)
         else null
@@ -141,6 +145,9 @@ private fun AgentScreen() {
     }
     val microphonePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         microphoneGranted = it
+    }
+    val accessibilitySettingsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        accessibilityEnabled = AccessibilityProtocol.isEnabled(context)
     }
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -204,6 +211,15 @@ private fun AgentScreen() {
                         ?: openAssistantSettings()
                     else openAssistantSettings()
                 }.onFailure { openAssistantSettings() }
+            },
+        )
+
+        AccessibilitySetup(
+            enabled = accessibilityEnabled,
+            onOpenSettings = {
+                runCatching {
+                    accessibilitySettingsLauncher.launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }.onFailure { Log.w("SolappanAccessibility", "Accessibility settings are unavailable") }
             },
         )
 
@@ -342,6 +358,30 @@ private fun AgentScreen() {
         if (response.isNotBlank()) {
             Text("Result", style = MaterialTheme.typography.titleMedium)
             Text(response)
+        }
+    }
+}
+
+@Composable
+private fun AccessibilitySetup(enabled: Boolean, onOpenSettings: () -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("OPTIONAL SCREEN CONTROL", style = MaterialTheme.typography.labelSmall)
+            Text(
+                if (enabled) "✓ SOL accessibility enabled" else "○ Disabled — native tools still work",
+                color = if (enabled) Color(0xFF75D8B7) else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                "Allows bounded screen observation, element taps, text entry, scrolling, Back and Home. Sensitive actions still require approval.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(onClick = onOpenSettings) {
+                Text(if (enabled) "Review accessibility settings" else "Enable optional screen control")
+            }
         }
     }
 }

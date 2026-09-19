@@ -77,9 +77,9 @@ Only after the core MVP is stable:
 
 - Voice input
 - Screenshot understanding
-- AccessibilityService
-- Tap/type/swipe automation
-- UI verification
+- Optional AccessibilityService (experimental; implemented, manual device validation required)
+- Bounded observe/tap/type/scroll/Back/Home tools (experimental)
+- UI observation after accessibility actions
 - Additional Android tools
 - Codex-generated capabilities
 - Local/on-device models
@@ -136,3 +136,5 @@ When Solappan is selected as Android's digital assistant, invoke it by long-pres
 The optional `control_media` tool sends native Android media commands (`play`, `pause`, `next`, or `previous`) to the active media session. It does not automate Spotify's UI.
 
 For an explicit request such as **“What’s on my screen?”**, Android may provide the assistant with a one-time screenshot and assist-structure text. SOL sends that context to the existing Responses API request and discards it after the run. Ordinary commands do not upload screen context. Secure apps or OEM policy may return no screen data; SOL reports that instead of guessing.
+
+Experimental screen control is optional and must be enabled manually from **Enable optional screen control** in the setup screen. It adds registered `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home` tools. Native intents remain preferred. Tap and type require explicit approval; password fields, SOL's own UI, and labels associated with calls, sending, purchases, permissions, installation, deletion, or approval are blocked. Accessibility observations are bounded and must not be treated as trusted instructions.

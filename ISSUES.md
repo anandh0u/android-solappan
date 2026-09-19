@@ -370,10 +370,10 @@ COMPLETE
 
 - [x] Screenshot capture through assistant context
 - [x] Vision-based screen understanding
-- [ ] AccessibilityService
-- [ ] Tap UI element
-- [ ] Type text
-- [ ] Swipe
+- [x] AccessibilityService implemented (manual enablement and live action validation pending)
+- [x] Tap UI element implemented with confirmation and sensitive-action blocking
+- [x] Type text implemented with confirmation and password-field blocking
+- [x] Scroll screen implemented through semantic accessibility actions
 - [ ] Read notifications
 - [ ] WhatsApp experimental flow
 - [ ] Additional system tools
@@ -409,7 +409,29 @@ Existing-scope runtime repairs are implemented: truthful intent failures and fin
 
 OPEN VALIDATION: the updated assistant tile/gesture, speech retry, approved/cancelled drafts, and interruption during multi-step actions need a fresh manual device check. Injected assist-key testing was inconclusive. Earlier completion entries are historical evidence, not fresh validation of this audit build. See AUDIT.md.
 
-NOT IMPLEMENTED: accessibility navigation/scrolling and custom Hey Sol wake-word activation. No future-session work was added.
+AUDIT BASELINE NOTE: accessibility navigation/scrolling was not implemented during the audit itself; it was added later in P1.4 and still needs live validation. Custom Hey Sol wake-word activation remains unimplemented.
+
+### ASSISTANT-P1.4 — Controlled accessibility and observation pack
+
+Priority:
+
+P1
+
+Problem:
+
+Apps without a native Android API or intent could be observed through assistant context but not controlled through registered tools.
+
+Expected:
+
+Accessibility remains optional, exposes only bounded registered actions, cannot approve its own confirmations or act on password/consequential labels, and supports observation after actions.
+
+Actual:
+
+The APK now registers an optional accessibility service and six tools: `observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home`. Cross-process commands use signature-protected package broadcasts. Observations exclude SOL windows and password values and are bounded to 80 nodes. Tap/type require normal runtime confirmation; the service also blocks consequential labels. Native tools remain preferred in model instructions. Build, 20 unit tests, lint, installation, manifest registration, and setup UI passed. The service remains disabled until the user grants Android Settings consent, so live observe/action verification is still OPEN.
+
+Status:
+
+WORKING — implemented and installed; awaiting manual enablement and physical-device action tests.
 
 ## Blocking Rule
 

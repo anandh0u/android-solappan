@@ -102,6 +102,12 @@ class ToolRegistry(tools: List<AgentTool>) {
                 CallContactTool(context),
                 PrepareSmsTool(context),
                 ControlMediaTool(context),
+                ObserveScreenTool(context),
+                TapElementTool(context),
+                TypeTextTool(context),
+                ScrollScreenTool(context),
+                PressNavigationTool(context, "press_back", "back", "Back"),
+                PressNavigationTool(context, "press_home", "home", "Home"),
             ),
         )
     }

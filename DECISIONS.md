@@ -192,3 +192,13 @@ Local clearing does not imply deletion from the API provider. Screenshot content
 Status: Accepted
 
 Hiding or restarting the assistant cancels its in-flight run and denies pending approval. The controller propagates cancellation and checks before executing another registered tool. Android actions already dispatched cannot be reversed. Multi-step workflows interrupted by dismissal require a new user request; the updated lifecycle still needs a fresh manual device regression check.
+
+## ADR-023 — Accessibility Is an Optional, Restricted Fallback
+
+Status: Accepted
+
+SOL exposes bounded accessibility observation, semantic element taps, editable-field text replacement, semantic scrolling, Back, and Home only as registered tools. Commands cross the assistant/main process boundary through package-scoped broadcasts protected by the app's signature permission. Native APIs and intents remain preferred.
+
+Tap and type use the existing confirmation gate. The accessibility service independently rejects SOL's own windows, password fields, and consequential targets such as approval, calls, sending, purchases, permissions, installation, and deletion. Observations are limited to 80 nodes and treat all screen text as untrusted. The service is optional and requires explicit Android Settings consent; disabled service errors are structured and do not affect the core MVP.
+
+This is observation-based verification, not proof of real-world outcomes. It can verify visible package/UI state after an action, but cannot prove that navigation started, a payment settled, a message sent, or another external effect completed.
