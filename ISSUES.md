@@ -409,7 +409,7 @@ Existing-scope runtime repairs are implemented: truthful intent failures and fin
 
 OPEN VALIDATION: the updated assistant tile/gesture, speech retry, approved/cancelled drafts, and interruption during multi-step actions need a fresh manual device check. Injected assist-key testing was inconclusive. Earlier completion entries are historical evidence, not fresh validation of this audit build. See AUDIT.md.
 
-AUDIT BASELINE NOTE: accessibility navigation/scrolling was not implemented during the audit itself; it was added later in P1.4 and still needs live validation. Custom Hey Sol wake-word activation remains unimplemented.
+AUDIT BASELINE NOTE: accessibility navigation/scrolling and custom wake activation were not implemented during the audit itself. Restricted accessibility was added later in P1.4. The experimental foreground Hey SOL listener was added in P2.1 and still needs final human phrase validation.
 
 ### ASSISTANT-P1.4 — Controlled accessibility and observation pack
 
@@ -458,6 +458,28 @@ COMPLETE — Spotify query routing and visible result-page validation passed on-
 ## Blocking Rule
 
 Do not implement P2 work while major P0 issues remain.
+
+### ASSISTANT-P2.1 — Spoken responses, Hey SOL, and minimal app surface
+
+Priority:
+
+P2
+
+Problem:
+
+SOL could accept speech but returned final answers silently, required a manual system gesture/tile for every invocation, and exposed setup/debug cards as the primary app experience.
+
+Expected:
+
+Final answers are spoken, the app defaults to a clean conversation surface, and an explicitly enabled foreground wake listener can invoke the existing assistant without creating another agent pipeline.
+
+Actual:
+
+Android TTS is integrated into both entry surfaces. MainActivity now shows a custom SOL app icon/mark, conversation, Mic/Send controls, wake toggle, and collapsed Setup panel. `SolWakeWordService` runs as a microphone foreground service, recognizes four SOL phrases, invokes the existing `VoiceInteractionService`, and coordinates microphone ownership with the assistant. The service never sends continuous microphone audio to OpenAI. Phrase matching has unit coverage. Build, lint, 22 tests, manifest registration, minimal UI hierarchy, service foreground state, notification, and offline recognizer startup pass. A typed model response rendered correctly and Android's TTS audio path became active. A final physical spoken wake phrase and assistant-surface audio check remain OPEN.
+
+Status:
+
+WORKING — implemented and installed; final human wake phrase and assistant-audio validation pending.
 
 ## Issue Format
 

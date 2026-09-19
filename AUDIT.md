@@ -33,7 +33,7 @@ Scope: audit and repair already implemented functionality only. No new milestone
 - Recheck the actual Quick Settings tile or configured system gesture, speech retry, and dismissal during a multi-step workflow on the phone after this update.
 - Recheck approved and cancelled call/SMS drafts. Calls still open the dialer; messages still open drafts, not automatic sending.
 - Intent acceptance is not proof that navigation started or an alarm was saved. Media-key dispatch is not proof of playback.
-- At audit time, accessibility scrolling/tapping and the custom “Hey Sol” wake word were not implemented. The later P1 upgrade added optional restricted accessibility code; see `ISSUES.md`. Wake word remains unimplemented.
+- At audit time, accessibility scrolling/tapping and the custom “Hey Sol” wake word were not implemented. Later upgrades added optional restricted accessibility and an experimental foreground wake listener; see `ISSUES.md` for current validation status.
 - The model may suggest unsupported next steps in prose; only registered tools can execute.
 - Screen context is sent to the model for explicit screen questions. Local clearing does not delete remote API records. A build-time API key in an APK is not suitable for public distribution.
 - Dependency/string-resource/icon warnings remain; no dependency upgrade or architecture rewrite was attempted.

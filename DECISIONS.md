@@ -216,3 +216,23 @@ Immediately before a registered accessibility tool executes, the session tempora
 Status: Accepted
 
 `search_music` opens Spotify search results through its native URI with a web fallback. It does not claim autoplay. Playback control remains a separate native media command, and visible screen observation may be used to verify only what the UI actually shows.
+
+## ADR-026 — Spoken Replies Use Android Text-to-Speech
+
+Status: Accepted
+
+SOL speaks final model responses through Android's installed text-to-speech engine in both the Compose app and the system-assistant session. Speech is capped to a bounded response length, stops with the owning surface, and does not create a second agent pipeline. This is post-response speech output, not full-duplex OpenAI Realtime audio.
+
+## ADR-027 — Hey SOL Is an Explicit Foreground Feature
+
+Status: Experimental
+
+Custom wake listening runs only after the user enables it from the SOL header. Android requires a visible foreground-service notification and microphone permission. Speech recognition checks locally/system-side for `Hey SOL`, `Hello SOL`, `Okay SOL`, or `OK SOL`; continuous microphone audio is not sent to OpenAI.
+
+The wake recognizer pauses while the assistant session owns speech input or TTS and resumes after the assistant hides. Android's assistant gesture and Quick Settings tile remain the reliable invocation paths. A production version should replace this recognizer loop with a low-power dedicated on-device hotword engine.
+
+## ADR-028 — Minimal Chat Surface, Collapsed Setup
+
+Status: Accepted
+
+MainActivity now defaults to a SOL-branded conversation surface with microphone, input, Send, wake status, and a single Setup entry. Permission, role, and accessibility details remain available in the collapsed Setup panel but no longer dominate the product experience. The custom SOL mark avoids copying OpenAI product logos or branding.

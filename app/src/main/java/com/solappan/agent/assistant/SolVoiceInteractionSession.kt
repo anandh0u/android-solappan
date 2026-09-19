@@ -14,6 +14,8 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.service.voice.VoiceInteractionSession
 import android.util.Log
 import android.util.Base64
@@ -67,10 +69,33 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private var runJob: Job? = null
     private var dismissJob: Job? = null
     private var acceptScreenContext = false
+    private var textToSpeech: TextToSpeech? = null
+    private var ttsReady = false
+    private var lastSpokenText: String? = null
     private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val runtime = AgentRuntimeCoordinator(
         AgentController(registry = ToolRegistry.sessionThree(sessionContext.applicationContext)),
     )
+
+    override fun onCreate() {
+        super.onCreate()
+        textToSpeech = TextToSpeech(sessionContext.applicationContext) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) {
+                textToSpeech?.language = Locale.getDefault()
+                textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = Unit
+                    override fun onDone(utteranceId: String?) {
+                        if (utteranceId == DISMISS_UTTERANCE_ID) scheduleFinishAfterSpeech()
+                    }
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) {
+                        if (utteranceId == DISMISS_UTTERANCE_ID) scheduleFinishAfterSpeech()
+                    }
+                })
+            }
+        }
+    }
 
     override fun onCreateContentView(): View {
         val root = FrameLayout(sessionContext).apply {
@@ -220,6 +245,10 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
+        sessionContext.sendBroadcast(
+            Intent(SolWakeWordService.ACTION_PAUSE).setPackage(sessionContext.packageName),
+            "com.solappan.agent.permission.INVOKE_ASSISTANT",
+        )
         runJob?.cancel()
         dismissJob?.cancel()
         clearScreenContext()
@@ -250,11 +279,16 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     override fun onHide() {
         uiVisible = false
+        textToSpeech?.stop()
         runJob?.cancel()
         dismissJob?.cancel()
         clearScreenContext()
         stopListening()
         resolveConfirmation(false)
+        sessionContext.sendBroadcast(
+            Intent(SolWakeWordService.ACTION_RESUME).setPackage(sessionContext.packageName),
+            "com.solappan.agent.permission.INVOKE_ASSISTANT",
+        )
         Log.i(TAG, "Assistant session hidden")
         super.onHide()
     }
@@ -263,6 +297,9 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         clearScreenContext()
         resolveConfirmation(false)
         confirmationArmJob?.cancel()
+        textToSpeech?.stop()
+        textToSpeech?.shutdown()
+        textToSpeech = null
         sessionScope.cancel()
         speechRecognizer?.destroy()
         speechRecognizer = null
@@ -273,6 +310,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         if (!::statusText.isInitialized) return
         runJob?.cancel()
         dismissJob?.cancel()
+        textToSpeech?.stop()
         stopListening()
         speechRecognizer?.destroy()
         speechRecognizer = null
@@ -482,16 +520,40 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         if (!state.loading) {
             transcriptText.maxLines = Int.MAX_VALUE
             transcriptText.ellipsize = null
-            if (state.error != null || state.timeline.isEmpty() ||
-                state.timeline.any { it.status != TimelineStatus.SUCCESS }) {
+            val shouldRemainVisible = state.error != null || state.timeline.isEmpty() ||
+                state.timeline.any { it.status != TimelineStatus.SUCCESS }
+            val spokenText = state.response.ifBlank { state.error.orEmpty() }.takeIf(String::isNotBlank)
+            if (spokenText != null && spokenText != lastSpokenText) {
+                lastSpokenText = spokenText
+                speakResponse(spokenText, dismissAfter = !shouldRemainVisible)
+            }
+            if (shouldRemainVisible) {
                 retryButton.visibility = View.VISIBLE
-            } else {
+            } else if (spokenText == null) {
                 dismissJob?.cancel()
                 dismissJob = sessionScope.launch {
                     delay(1_500)
                     if (uiVisible) finish()
                 }
             }
+        }
+    }
+
+    private fun speakResponse(text: String, dismissAfter: Boolean) {
+        if (!ttsReady) {
+            if (dismissAfter) scheduleFinishAfterSpeech()
+            return
+        }
+        val utteranceId = if (dismissAfter) DISMISS_UTTERANCE_ID else RESPONSE_UTTERANCE_ID
+        val result = textToSpeech?.speak(text.take(MAX_SPOKEN_CHARS), TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+        if (dismissAfter && result == TextToSpeech.ERROR) scheduleFinishAfterSpeech()
+    }
+
+    private fun scheduleFinishAfterSpeech() {
+        dismissJob?.cancel()
+        dismissJob = sessionScope.launch {
+            delay(600)
+            if (uiVisible) finish()
         }
     }
 
@@ -610,6 +672,9 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         private const val SCREENSHOT_JPEG_QUALITY = 72
         private const val MAX_ASSIST_TEXT_CHARS = 4_000
         private const val SCREEN_ACTION_WINDOW_DELAY_MS = 700L
+        private const val MAX_SPOKEN_CHARS = 1_200
+        private const val DISMISS_UTTERANCE_ID = "sol_response_and_dismiss"
+        private const val RESPONSE_UTTERANCE_ID = "sol_response"
         private val SCREEN_ACTION_TOOLS = setOf(
             "observe_screen", "tap_element", "type_text", "scroll_screen", "press_back", "press_home",
         )

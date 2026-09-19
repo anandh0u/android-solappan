@@ -18,7 +18,7 @@ Its core claim is: **we built an agent runtime that turns Android into a tool en
 
 ## High-Level Architecture
 
-User
+User through Compose, Android assistant, Quick Settings, or optional Hey SOL
 
 ↓
 
@@ -250,6 +250,16 @@ Risk:
 
 LOW
 
+### search_music
+
+Opens Spotify search results for a validated query. It does not claim that playback started.
+
+Risk: LOW
+
+### Optional accessibility tools
+
+`observe_screen`, `tap_element`, `type_text`, `scroll_screen`, `press_back`, and `press_home` provide a restricted fallback when native Android APIs are unavailable. Tap and type require approval. Sensitive, password, ambiguous, hidden, disabled, stale, and SOL-owned targets are rejected.
+
 ## Security Requirements
 
 Never hardcode:
@@ -310,16 +320,14 @@ The model CANNOT:
 
 ## UI
 
-Primary screen should contain:
+The primary screen defaults to:
 
-- task input
-- submit button
-- current agent state
-- plan/progress
-- action timeline
-- confirmation cards
-- final result
-- error messages
+- custom SOL identity
+- conversation
+- microphone, text input, and Send controls
+- compact wake status
+- confirmation dialogs and progress only when relevant
+- a collapsed Setup panel for permissions and Android integration
 
 Avoid unnecessary screens.
 
