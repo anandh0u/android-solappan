@@ -58,6 +58,28 @@ COMPLETE — verified on the connected phone with a live Responses API request.
 - [x] Improve confirmation UI
 - [x] Demo reset functionality
 
+### ASSISTANT-P1.1 — Quick Settings invocation
+
+Priority:
+
+P1
+
+Problem:
+
+Solappan had no reliable one-tap invocation path when a custom “Hey Sol” wake word was unavailable.
+
+Expected:
+
+A Quick Settings tile opens the same temporary system-assistant session without launching MainActivity or creating another agent pipeline.
+
+Actual:
+
+The manifest registers a native SOL `TileService`. Tapping it sends a package-internal request to the active `VoiceInteractionService`, which invokes the existing session with Android's `showSession` API. The APK builds, all tests pass, and a physical-device tile click produced the focused `VoiceInteractionSession` window.
+
+Status:
+
+COMPLETE
+
 ### ASSISTANT-P0.2 — Reusable agent execution state
 
 Priority:
