@@ -13,6 +13,7 @@ import java.net.URL
 class OpenAiClient(
     private val apiKey: String = BuildConfig.OPENAI_API_KEY,
     private val model: String = BuildConfig.OPENAI_MODEL,
+    private val context: android.content.Context? = null,
 ) {
     fun createResponse(
         input: Any,
@@ -38,17 +39,21 @@ class OpenAiClient(
         instructions: String,
         previousResponseId: String?,
     ): JSONObject {
-        check(apiKey.isNotBlank()) {
+        val session = if (BuildConfig.USE_GATEWAY) SupabaseSession(checkNotNull(context) { "Gateway context unavailable." }) else null
+        check(session != null || apiKey.isNotBlank()) {
             "OpenAI API key is missing. Add OPENAI_API_KEY to local.properties and rebuild."
         }
 
         Log.i(TAG, "OpenAI request started")
-        val connection = (URL(RESPONSES_URL).openConnection() as HttpURLConnection).apply {
+        val bearer = session?.accessToken() ?: apiKey
+        val connection = (URL(session?.gatewayUrl ?: RESPONSES_URL).openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = false
             requestMethod = "POST"
             connectTimeout = 20_000
             readTimeout = 60_000
             doOutput = true
-            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Authorization", "Bearer $bearer")
+            if (session != null) setRequestProperty("apikey", BuildConfig.SUPABASE_PUBLISHABLE_KEY)
             setRequestProperty("Content-Type", "application/json")
         }
 

@@ -1,5 +1,12 @@
 # Hackathon Issues
 
+## Gateway hardening update — 2026-09-20
+
+- Implemented: release-only gateway enforcement, email sign-in, Keystore-encrypted cross-process sessions, verified-user/beta access checks, request quotas, continuation ownership and bounded model requests. Added CI and gateway policy/auth rejection tests.
+- Deployment blocked: Supabase CLI is not authenticated. Supplied publishable configuration is valid for a client but does not authorize deployment. No database changes or live gateway claims made. Developer demo mode remains enabled locally.
+- Still open (#1/#4): apply and verify SQL/RLS under real service roles and concurrent load, deploy secrets/function, qualify sign-in/refresh/logout and multi-step tool use on the phone, review retention/privacy and spending controls. See docs/GATEWAY.md.
+- Existing voice, screen control, integration and release backlog below remains open; this update does not claim 90% production readiness.
+
 ## Latest audit status — 2026-09-20
 
 This section supersedes historical completion claims below. Source repairs are implemented; final combined build/device evidence is recorded in AUDIT.md. A checked historical milestone is not proof of fresh regression or production readiness.

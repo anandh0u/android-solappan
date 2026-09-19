@@ -124,7 +124,7 @@ private data class ChatTurn(val goal: String, val state: AgentRuntimeUiState)
 private fun SolChatScreen() {
     val context = LocalContext.current
     val controller = remember(context) {
-        AgentController(registry = ToolRegistry.sessionThree(context.applicationContext))
+        AgentController(client = OpenAiClient(context = context.applicationContext), registry = ToolRegistry.sessionThree(context.applicationContext))
     }
     val runtime = remember(controller) { AgentRuntimeCoordinator(controller) }
     val conversation = remember(controller) { AssistantConversation() }
@@ -575,7 +575,9 @@ private fun SetupPanel(
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Setup", fontWeight = FontWeight.SemiBold)
-            Text(statusLine("API key configured", modelReady))
+            AccountPanel()
+            Text(statusLine(if (BuildConfig.USE_GATEWAY) "Gateway configured" else "Developer API key configured",
+                if (BuildConfig.USE_GATEWAY) BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_PUBLISHABLE_KEY.isNotBlank() else modelReady))
             Text(BuildConfig.OPENAI_MODEL, fontSize = 12.sp)
             Text(statusLine("Microphone", microphoneGranted))
             Text(statusLine("Contacts", contactsGranted))

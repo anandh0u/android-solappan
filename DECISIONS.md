@@ -1,5 +1,9 @@
 # Architecture Decision Log
 
+## ADR-030 — Authenticated private-beta gateway
+
+Release builds always route through Supabase and exclude the developer OpenAI credential. Debug direct mode remains available only to preserve the private demo until deployment. Email/password Auth sessions are AES-GCM encrypted with Android Keystore in no-backup storage, with a cross-process refresh lock; passwords are not persisted. The Edge Function independently verifies Auth tokens, requires verified allowlisted users, fixes model cost parameters and validates continuation ownership. SQL security-definer quota reservation uses a transaction advisory lock for small-beta throughput, with service-role-only execution. This is a private-beta design, not a public scale or privacy certification. Hosted deployment and device account validation remain release gates.
+
 ## ADR-029 — Audit corrections and current behavior (2026-09-20)
 
 Supersedes the auto-dismiss portions of ADR-017 and recognizer-loop implementation of ADR-027. The assistant stays visible after completion until Close SOL, an explicit spoken dismissal, or system/user dismissal. One post-TTS follow-up recognition turn is offered; silence does not restart the recognizer. Three bounded text turns provide session-local context, never authorization or stale screen evidence.

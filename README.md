@@ -77,7 +77,7 @@ The current default is **GPT-6 Astra**, using low reasoning effort. Model availa
 
 On the phone, open **Setup**, grant microphone permission, choose SOL as the default assistant, and grant contacts only for contact workflows. Enable screen control only for accessibility tools. Enable Hey SOL explicitly; its persistent notification provides a Stop action.
 
-Release builds deliberately omit the local key; they need a backend before they can reason. **Do not distribute a debug APK containing your API key.** Build-time configuration is for the local demonstration. Public distribution requires an authenticated server gateway and release hardening tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues).
+Release builds omit the local key and require the new authenticated Supabase gateway. Account sign-in, encrypted session storage, server quotas and per-user conversation ownership are implemented; deployment and end-to-end qualification remain pending. See [gateway setup and privacy boundaries](docs/GATEWAY.md). **Do not distribute a debug APK containing your API key.**
 
 ## Runtime boundaries
 
@@ -89,9 +89,9 @@ Intent acceptance means Android received a request. It does not prove that an al
 
 ## Release status
 
-**Hackathon prototype / technical alpha.** The current audit repairs microphone contention, repeated wake activation, assistant lifetime, cancellation, and chat continuity. The combined debug build, 29 unit tests and lint pass; installation and offline wake-engine startup passed on the connected phone. Human spoken and cross-app regression checks remain open; [AUDIT.md](AUDIT.md) records evidence without equating earlier tests with current validation.
+**Hackathon prototype / technical alpha.** The current audit repairs microphone contention, repeated wake activation, assistant lifetime, cancellation, and chat continuity. Android has 31 passing unit tests and the gateway has 10 passing local policy/auth tests; debug assembly and lint pass. The updated APK installed and cold-launched on the connected phone. Human spoken and cross-app regression checks remain open; [AUDIT.md](AUDIT.md) records evidence without equating earlier tests with current validation.
 
-Production work includes an authenticated model gateway, OEM/battery qualification, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These are tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues).
+Production work includes deploying and qualifying the implemented model gateway, OEM/battery qualification, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These are tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). CI now checks Android compilation/tests/lint, release key exclusion and gateway policy/authentication tests. Passing CI is not proof of device or public-release readiness.
 
 ## Explore the repository
 

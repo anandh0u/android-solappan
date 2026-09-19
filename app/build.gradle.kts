@@ -24,6 +24,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "SUPABASE_URL", quotedBuildValue(localProperties.getProperty("SUPABASE_URL", "")))
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", quotedBuildValue(localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")))
+        buildConfigField("boolean", "USE_GATEWAY", localProperties.getProperty("USE_GATEWAY", "false").toBoolean().toString())
 
         buildConfigField(
             "String",
@@ -46,6 +49,7 @@ android {
     buildTypes {
         getByName("release") {
             buildConfigField("String", "OPENAI_API_KEY", quotedBuildValue(""))
+            buildConfigField("boolean", "USE_GATEWAY", "true")
         }
     }
 

@@ -77,7 +77,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private var lastSpokenText: String? = null
     private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val runtime = AgentRuntimeCoordinator(
-        AgentController(registry = ToolRegistry.sessionThree(sessionContext.applicationContext)),
+        AgentController(client = com.solappan.agent.OpenAiClient(context = sessionContext.applicationContext),
+            registry = ToolRegistry.sessionThree(sessionContext.applicationContext)),
     )
 
     override fun onCreate() {

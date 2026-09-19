@@ -1,5 +1,14 @@
 # Current audit — 2026-09-20
 
+## Gateway increment — latest evidence
+
+- `testDebugUnitTest assembleDebug lintDebug generateReleaseBuildConfig`: successful; 31 Android tests pass. Lint retains 31 warnings, no errors.
+- `deno test supabase/functions/agent-gateway`: 10 policy and mocked authentication/ownership tests pass.
+- Generated release configuration verified: empty provider key and gateway mode enabled.
+- Updated debug APK installed successfully; MainActivity cold-launch returned Status: ok on the connected phone. This is not a voice or cross-app regression test.
+- Supabase Auth settings endpoint reachable; CLI lacks deployment authentication. No schema/function deployed. Local PostgreSQL qualification unavailable because Docker engine is stopped. Database grants, quota concurrency, real sign-in/refresh and gateway tool workflows remain unverified.
+- CI added; hosted result must be checked separately. Deployment/retention instructions are in docs/GATEWAY.md; remaining release gates tracked in issues #1–#6. No percentage-based production certification.
+
 This report supersedes the earlier 18-test audit as the current status. Historical device results remain in `ISSUES.md`; they do not certify the updated build. Scope includes reported microphone noise/repeated activation, outside-app invocation, persistent assistant conversation, tool safety, UI, model configuration, and documentation.
 
 ## Findings and repairs in source

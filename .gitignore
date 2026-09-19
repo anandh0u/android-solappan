@@ -8,3 +8,8 @@ captures/
 .externalNativeBuild/
 .cxx/
 .kotlin/
+.env
+.env.*
+!.env.example
+supabase/.temp/
+node_modules/

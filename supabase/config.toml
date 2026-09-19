@@ -1,0 +1,6 @@
+project_id = "android-sol"
+
+[functions.agent-gateway]
+# The handler verifies every bearer token with Supabase Auth /user.
+# This supports current asymmetric user JWTs without relying on legacy gateway verification.
+verify_jwt = false
