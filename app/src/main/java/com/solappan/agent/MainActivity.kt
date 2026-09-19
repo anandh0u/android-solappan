@@ -115,6 +115,9 @@ private fun AgentScreen() {
     var contactsGranted by remember {
         mutableStateOf(context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED)
     }
+    var microphoneGranted by remember {
+        mutableStateOf(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+    }
     val roleManager = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) context.getSystemService(RoleManager::class.java)
         else null
@@ -135,6 +138,9 @@ private fun AgentScreen() {
     }
     val contactPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         contactsGranted = it
+    }
+    val microphonePermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        microphoneGranted = it
     }
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -184,6 +190,7 @@ private fun AgentScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatusPill("● Model ready", BuildConfig.OPENAI_API_KEY.isNotBlank())
             StatusPill("● Contacts", contactsGranted)
+            StatusPill("● Microphone", microphoneGranted)
         }
 
         AssistantRoleSetup(
@@ -221,6 +228,12 @@ private fun AgentScreen() {
         if (!contactsGranted) {
             OutlinedButton(onClick = { contactPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }) {
                 Text("Enable contact tools")
+            }
+        }
+
+        if (!microphoneGranted) {
+            OutlinedButton(onClick = { microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }) {
+                Text("Enable assistant microphone")
             }
         }
 

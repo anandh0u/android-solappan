@@ -124,6 +124,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P0.5 — Assistant microphone and speech recognition
+
+Priority:
+
+P0
+
+Problem:
+
+The system assistant session could appear but could not listen for a natural-language request.
+
+Expected:
+
+MainActivity requests microphone permission through Android, assistant invocation starts speech recognition, recognized text is shown, and cancellation/no-speech/network errors offer a safe retry.
+
+Actual:
+
+Microphone setup and session-owned `SpeechRecognizer` integration are implemented. On the connected phone, Android permission grant, the active microphone indicator, Listening state, no-match handling, and Retry UI were verified. A successful spoken transcript still requires one manual voice test because synthesized audio from the development computer was not captured by the phone. Recognized text is intentionally not sent to the agent until P0.6.
+
+Status:
+
+WORKING — successful transcript display awaits manual speech verification.
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:

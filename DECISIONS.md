@@ -136,3 +136,11 @@ Status: Accepted
 The system assistant session uses a small native Android view hierarchy created by `VoiceInteractionSession` rather than launching MainActivity or maintaining a permanent overlay. This keeps invocation fast, lifecycle ownership explicit, and dependencies minimal.
 
 The normal Compose screen remains the richer setup/debug experience. Both surfaces will consume the same runtime coordinator once speech and agent execution are connected.
+
+## ADR-016 — Android SpeechRecognizer for Session Input
+
+Status: Accepted
+
+The assistant session uses Android's `SpeechRecognizer` with explicit `RECORD_AUDIO` permission rather than a second model-facing voice pipeline. Partial and final transcripts stay inside the assistant session and will enter the existing `AgentController` pipeline as text.
+
+MainActivity remains responsible for explaining and requesting microphone permission. The session handles missing permission, unavailable recognition, silence, cancellation, network failure, and retry without crashing.
