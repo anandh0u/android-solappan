@@ -102,6 +102,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P0.4 — Temporary assistant session UI
+
+Priority:
+
+P0
+
+Problem:
+
+Android could start Solappan's assistant session, but the session had no visible interaction surface.
+
+Expected:
+
+Invoking the default assistant displays a small temporary SOL interface above the current app without launching MainActivity, and the user can dismiss it safely.
+
+Actual:
+
+`SolVoiceInteractionSession` now creates a compact dark bottom panel with SOL branding, a clear Ready state, and a Dismiss action. It was invoked through Android's ASSIST key path over the Nothing launcher; Android reported `VoiceInteractionSession` as the focused window, and Dismiss returned focus to the launcher. Speech is intentionally deferred to P0.5.
+
+Status:
+
+COMPLETE
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:

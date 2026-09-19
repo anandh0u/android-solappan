@@ -128,3 +128,11 @@ Status: Accepted
 Solappan uses Android's supported `VoiceInteractionService`, `VoiceInteractionSessionService`, and `VoiceInteractionSession` APIs instead of a permanent overlay or Accessibility service for assistant invocation.
 
 The always-available interaction service and temporary session service run in dedicated application processes. MainActivity remains the setup/debug surface and requests the assistant role through the system-controlled `RoleManager` flow, with the OEM Digital Assistant settings page as a fallback.
+
+## ADR-015 — Lightweight Native Assistant Surface
+
+Status: Accepted
+
+The system assistant session uses a small native Android view hierarchy created by `VoiceInteractionSession` rather than launching MainActivity or maintaining a permanent overlay. This keeps invocation fast, lifecycle ownership explicit, and dependencies minimal.
+
+The normal Compose screen remains the richer setup/debug experience. Both surfaces will consume the same runtime coordinator once speech and agent execution are connected.
