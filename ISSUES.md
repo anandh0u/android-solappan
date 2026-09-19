@@ -234,6 +234,28 @@ Status:
 
 COMPLETE
 
+### ASSISTANT-P0.10 — Final assistant tool validation
+
+Priority:
+
+P0
+
+Problem:
+
+The complete system-assistant path required a final physical-device pass across every demo-critical Android action before beginning P1 work.
+
+Expected:
+
+Assistant-originated requests reliably open an app, configure an alarm, open Maps, prepare a call after confirmation, and prepare an SMS draft after confirmation.
+
+Actual:
+
+The connected phone completed a combined spoken workflow that opened Spotify, launched Android's 7 AM alarm flow, and opened Maps for GEC Thrissur. Device task records confirmed all three intents. The call path passed cancellation and approval, opening the dialer only after explicit approval. The SMS path passed cancellation and approval; Android task records confirmed Google Messages received the `ACTION_SENDTO` request from Solappan and displayed the prepared conversation task. The user retained the final Call and Send actions.
+
+Status:
+
+COMPLETE
+
 ### SAFETY-001 — Prevent confirmation click-through
 
 Priority:
