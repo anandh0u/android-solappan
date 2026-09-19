@@ -51,7 +51,7 @@ internal class OpenAppTool(context: Context) : ContextTool(context) {
             }?.activityInfo?.packageName?.let(packageManager::getLaunchIntentForPackage)
             ?: return ToolResult.failure("Application '$appName' was not found.", "APP_NOT_FOUND")
 
-        return launch(launchIntent).copy(
+        return launch(launchIntent).withSuccessDetails(
             message = "Opened $appName.",
             data = JSONObject().put("appName", appName),
         )
@@ -78,7 +78,7 @@ internal class OpenMapsTool(context: Context) : ContextTool(context) {
     override fun execute(arguments: JSONObject): ToolResult {
         val destination = requiredString(arguments, "destination") ?: return invalid("destination")
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(destination)}"))
-        return launch(intent).copy(
+        return launch(intent).withSuccessDetails(
             message = "Opened Maps for $destination.",
             data = JSONObject().put("destination", destination),
         )
@@ -105,7 +105,7 @@ internal class SetAlarmTool(context: Context) : ContextTool(context) {
             .putExtra(AlarmClock.EXTRA_MINUTES, minute)
             .putExtra(AlarmClock.EXTRA_MESSAGE, label)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, false)
-        return launch(intent).copy(
+        return launch(intent).withSuccessDetails(
             message = "Opened the alarm flow for ${"%02d:%02d".format(hour, minute)}.",
             data = JSONObject().put("hour", hour).put("minute", minute).put("label", label),
         )
@@ -134,11 +134,12 @@ private fun findContacts(context: Context, query: String, limit: Int = 5): Resul
         val idIndex = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
         val nameIndex = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
         val numberIndex = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER)
-        while (cursor.moveToNext() && matches.size < limit) {
-            matches += ContactMatch(cursor.getLong(idIndex), cursor.getString(nameIndex), cursor.getString(numberIndex))
+        while (cursor.moveToNext() && matches.map { it.id }.distinct().size < limit) {
+            val match = ContactMatch(cursor.getLong(idIndex), cursor.getString(nameIndex), cursor.getString(numberIndex))
+            if (matches.none { it.id == match.id && it.number == match.number }) matches += match
         }
     }
-    matches.distinctBy { it.id }
+    matches
 }
 
 internal class FindContactTool(context: Context) : ContextTool(context) {
@@ -181,7 +182,7 @@ internal class CallContactTool(context: Context) : ContextTool(context) {
         if (matches.isEmpty()) return ToolResult.failure("No contact matched '$query'.", "CONTACT_NOT_FOUND")
         if (matches.size > 1) return ToolResult.failure("Contact '$query' is ambiguous; ${matches.size} matches found.", "CONTACT_AMBIGUOUS")
         val match = matches.single()
-        return launch(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(match.number)}"))).copy(
+        return launch(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(match.number)}"))).withSuccessDetails(
             message = "Opened the dialer for ${match.name}; the user must press Call.",
             data = JSONObject().put("contactId", match.id).put("name", match.name),
         )
@@ -214,7 +215,7 @@ internal class PrepareSmsTool(context: Context) : ContextTool(context) {
             .putExtra("sms_body", message)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         Telephony.Sms.getDefaultSmsPackage(context)?.let(intent::setPackage)
-        return launch(intent).copy(
+        return launch(intent).withSuccessDetails(
             message = "Prepared an SMS to ${match.name}; the user must review and send it.",
             data = JSONObject().put("contactId", match.id).put("name", match.name),
         )

@@ -18,6 +18,7 @@ data class AgentRuntimeUiState(
     val error: String? = null,
 ) {
     internal fun beginRun(): AgentRuntimeUiState = copy(
+        agentState = AgentState.THINKING,
         loading = true,
         timeline = emptyList(),
         response = "",
@@ -25,7 +26,9 @@ data class AgentRuntimeUiState(
     )
 
     internal fun apply(event: AgentEvent): AgentRuntimeUiState = when (event) {
-        is AgentEvent.StateChanged -> copy(agentState = event.state)
+        is AgentEvent.StateChanged -> copy(agentState = if (
+            event.state == AgentState.COMPLETED && timeline.any { it.status == TimelineStatus.FAILED }
+        ) AgentState.FAILED else event.state)
         is AgentEvent.ToolStarted -> copy(
             timeline = timeline + TimelineEntry(event.toolName, "Starting", TimelineStatus.RUNNING),
         )

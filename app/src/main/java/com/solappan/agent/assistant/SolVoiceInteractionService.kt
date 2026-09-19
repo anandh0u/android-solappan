@@ -31,7 +31,7 @@ class SolVoiceInteractionService : VoiceInteractionService() {
             registerReceiver(showAssistantReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
             @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(showAssistantReceiver, filter)
+            registerReceiver(showAssistantReceiver, filter, "com.solappan.agent.permission.INVOKE_ASSISTANT", null)
         }
         Log.i(TAG, "Solappan is the active voice interaction service")
     }

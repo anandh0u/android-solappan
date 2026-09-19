@@ -7,6 +7,15 @@ import org.junit.Test
 
 class AgentRuntimeUiStateTest {
     @Test
+    fun `failed tool cannot become a successful completed state`() {
+        val state = AgentRuntimeUiState()
+            .apply(AgentEvent.ToolStarted("open_app"))
+            .apply(AgentEvent.ToolFinished("open_app", false, "Unavailable", "INTENT_FAILED"))
+            .apply(AgentEvent.StateChanged(AgentState.COMPLETED))
+        assertEquals(AgentState.FAILED, state.agentState)
+        assertEquals(AgentState.THINKING, state.beginRun().agentState)
+    }
+    @Test
     fun `begin run clears previous output and timeline`() {
         val state = AgentRuntimeUiState(
             agentState = AgentState.COMPLETED,

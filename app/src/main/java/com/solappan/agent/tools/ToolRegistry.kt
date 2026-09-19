@@ -24,6 +24,7 @@ class ToolRegistry(tools: List<AgentTool>) {
         } catch (_: JSONException) {
             return null
         }
+        if (!validArguments(tool, arguments)) return null
         return ToolConfirmation(tool.name, tool.confirmationSummary(arguments), tool.riskLevel)
     }
 
@@ -44,6 +45,9 @@ class ToolRegistry(tools: List<AgentTool>) {
                 errorCode = "INVALID_PARAMETERS",
             )
         }
+        if (!validArguments(tool, arguments)) {
+            return ToolResult.failure("Tool '$name' received invalid parameters.", "INVALID_PARAMETERS")
+        }
         if (tool.requiresConfirmation && !confirmationGranted) {
             return ToolResult.failure(
                 message = "Tool '$name' requires explicit user confirmation.",
@@ -58,6 +62,31 @@ class ToolRegistry(tools: List<AgentTool>) {
                 errorCode = "TOOL_EXECUTION_FAILED",
             )
         }
+    }
+
+    private fun validArguments(tool: AgentTool, arguments: JSONObject): Boolean {
+        val properties = tool.parameters.optJSONObject("properties") ?: JSONObject()
+        val required = tool.parameters.optJSONArray("required") ?: JSONArray()
+        for (index in 0 until required.length()) {
+            if (!arguments.has(required.getString(index))) return false
+        }
+        for (key in arguments.keys()) {
+            val spec = properties.optJSONObject(key) ?: return false
+            val value = arguments.opt(key)
+            when (spec.optString("type")) {
+                "string" -> if (value !is String || value.isBlank()) return false
+                "integer" -> {
+                    if (value !is Number || !value.toDouble().isFinite() ||
+                        value.toDouble() % 1.0 != 0.0) return false
+                    if (spec.has("minimum") && value.toDouble() < spec.getDouble("minimum")) return false
+                    if (spec.has("maximum") && value.toDouble() > spec.getDouble("maximum")) return false
+                }
+            }
+            spec.optJSONArray("enum")?.let { choices ->
+                if ((0 until choices.length()).none { choices.get(it) == value }) return false
+            }
+        }
+        return true
     }
 
     companion object {

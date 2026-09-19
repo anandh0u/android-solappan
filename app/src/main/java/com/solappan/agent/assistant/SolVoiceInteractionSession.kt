@@ -26,6 +26,7 @@ import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
 import com.solappan.agent.AgentController
 import com.solappan.agent.AgentRuntimeCoordinator
 import com.solappan.agent.AgentRuntimeUiState
@@ -63,6 +64,9 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private var confirmationArmJob: Job? = null
     private var latestScreenshotDataUrl: String? = null
     private var latestAssistText: String? = null
+    private var runJob: Job? = null
+    private var dismissJob: Job? = null
+    private var acceptScreenContext = false
     private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val runtime = AgentRuntimeCoordinator(
         AgentController(registry = ToolRegistry.sessionThree(sessionContext.applicationContext)),
@@ -80,8 +84,9 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             elevation = dp(12).toFloat()
             background = roundedBackground(Color.rgb(26, 21, 39), 28)
         }
+        val scrollPanel = ScrollView(sessionContext).apply { addView(panel) }
         root.addView(
-            panel,
+            scrollPanel,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -215,6 +220,10 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
+        runJob?.cancel()
+        dismissJob?.cancel()
+        clearScreenContext()
+        acceptScreenContext = true
         uiVisible = true
         Log.i(TAG, "Assistant session shown")
         startListening()
@@ -222,7 +231,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     override fun onHandleScreenshot(screenshot: Bitmap?) {
         super.onHandleScreenshot(screenshot)
-        latestScreenshotDataUrl = screenshot?.toJpegDataUrl()
+        if (!uiVisible || !acceptScreenContext) return
+        latestScreenshotDataUrl = runCatching { screenshot?.toJpegDataUrl() }.getOrNull()
         Log.i(TAG, if (screenshot == null) "Assistant screenshot unavailable" else "Assistant screenshot ready")
     }
 
@@ -233,12 +243,16 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         content: AssistContent?,
     ) {
         super.onHandleAssist(data, structure, content)
-        latestAssistText = structure?.extractVisibleText()
+        if (!uiVisible || !acceptScreenContext) return
+        latestAssistText = runCatching { structure?.extractVisibleText() }.getOrNull()
         Log.i(TAG, if (latestAssistText == null) "Assistant structure unavailable" else "Assistant structure ready")
     }
 
     override fun onHide() {
         uiVisible = false
+        runJob?.cancel()
+        dismissJob?.cancel()
+        clearScreenContext()
         stopListening()
         resolveConfirmation(false)
         Log.i(TAG, "Assistant session hidden")
@@ -246,6 +260,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     }
 
     override fun onDestroy() {
+        clearScreenContext()
         resolveConfirmation(false)
         confirmationArmJob?.cancel()
         sessionScope.cancel()
@@ -256,8 +271,15 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     private fun startListening() {
         if (!::statusText.isInitialized) return
+        runJob?.cancel()
+        dismissJob?.cancel()
+        stopListening()
+        speechRecognizer?.destroy()
+        speechRecognizer = null
         resolveConfirmation(false)
         retryButton.visibility = View.GONE
+        transcriptText.maxLines = 3
+        transcriptText.ellipsize = TextUtils.TruncateAt.END
         timelineContainer.removeAllViews()
         timelineContainer.visibility = View.GONE
 
@@ -288,8 +310,9 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     }
 
     private fun stopListening() {
-        if (listening) speechRecognizer?.cancel()
+        val wasListening = listening
         listening = false
+        if (wasListening) speechRecognizer?.cancel()
     }
 
     private fun showSpeechError(title: String, detail: String) {
@@ -317,6 +340,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         }
 
         override fun onError(error: Int) {
+            if (!uiVisible || !listening) return
             val message = when (error) {
                 SpeechRecognizer.ERROR_NO_MATCH -> "I couldn't understand that."
                 SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech was detected."
@@ -329,6 +353,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         }
 
         override fun onResults(results: Bundle?) {
+            if (!uiVisible || !listening) return
             listening = false
             val transcript = results
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
@@ -359,8 +384,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         val requestsScreenContext = transcript.requestsScreenContext()
         val screenshotDataUrl = latestScreenshotDataUrl.takeIf { requestsScreenContext }
         val assistText = latestAssistText.takeIf { requestsScreenContext }
-        latestScreenshotDataUrl = null
-        latestAssistText = null
+        clearScreenContext()
         if (requestsScreenContext && screenshotDataUrl == null && assistText == null) {
             showSpeechError(
                 "Screen unavailable",
@@ -374,7 +398,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             append(assistText)
         }
         statusText.text = "Understanding…"
-        sessionScope.launch {
+        runJob?.cancel()
+        runJob = sessionScope.launch {
             withContext(Dispatchers.IO) {
                 runtime.run(
                     goal = modelGoal,
@@ -390,6 +415,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     private suspend fun requestAssistantConfirmation(request: ToolConfirmation): Boolean =
         withContext(Dispatchers.Main) {
+            if (!uiVisible) return@withContext false
             pendingConfirmation?.complete(false)
             val decision = CompletableDeferred<Boolean>()
             pendingConfirmation = decision
@@ -408,7 +434,11 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
                     cancelButton.isEnabled = true
                 }
             }
-            decision.await()
+            try {
+                decision.await()
+            } finally {
+                if (pendingConfirmation === decision) resolveConfirmation(false)
+            }
         }
 
     private fun resolveConfirmation(approved: Boolean) {
@@ -442,10 +472,14 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         }
         renderTimeline(state.timeline)
         if (!state.loading) {
-            if (state.error != null) {
+            transcriptText.maxLines = Int.MAX_VALUE
+            transcriptText.ellipsize = null
+            if (state.error != null || state.timeline.isEmpty() ||
+                state.timeline.any { it.status != TimelineStatus.SUCCESS }) {
                 retryButton.visibility = View.VISIBLE
             } else {
-                sessionScope.launch {
+                dismissJob?.cancel()
+                dismissJob = sessionScope.launch {
                     delay(1_500)
                     if (uiVisible) finish()
                 }
@@ -486,6 +520,12 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private fun String.toDisplayName(): String =
         split('_').joinToString(" ") { word -> word.replaceFirstChar(Char::uppercase) }
 
+    private fun clearScreenContext() {
+        acceptScreenContext = false
+        latestScreenshotDataUrl = null
+        latestAssistText = null
+    }
+
     private fun String.requestsScreenContext(): Boolean {
         val normalized = lowercase(Locale.ROOT)
         return SCREEN_CONTEXT_PHRASES.any(normalized::contains)
@@ -513,13 +553,20 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
     private fun AssistStructure.extractVisibleText(): String? {
         val parts = linkedSetOf<String>()
-        fun collect(node: AssistStructure.ViewNode) {
+        var visited = 0
+        fun collect(node: AssistStructure.ViewNode, depth: Int = 0) {
+            if (++visited > 2_000 || depth > 64 || parts.sumOf(String::length) >= MAX_ASSIST_TEXT_CHARS) return
+            val variation = node.inputType and android.text.InputType.TYPE_MASK_VARIATION
+            val inputClass = node.inputType and android.text.InputType.TYPE_MASK_CLASS
+            if (node.visibility != View.VISIBLE ||
+                (inputClass == android.text.InputType.TYPE_CLASS_TEXT && variation in listOf(0x80, 0x90, 0xe0)) ||
+                (inputClass == android.text.InputType.TYPE_CLASS_NUMBER && variation == 0x10)) return
             sequenceOf(node.text, node.contentDescription, node.hint)
                 .mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
                 .forEach(parts::add)
             for (index in 0 until node.childCount) {
                 if (parts.sumOf(String::length) >= MAX_ASSIST_TEXT_CHARS) return
-                collect(node.getChildAt(index))
+                collect(node.getChildAt(index), depth + 1)
             }
         }
         for (index in 0 until windowNodeCount) {

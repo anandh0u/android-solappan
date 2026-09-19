@@ -123,17 +123,17 @@ private fun AgentScreen() {
         else null
     }
     val assistantRoleAvailable = remember(roleManager) {
-        roleManager?.isRoleAvailable(RoleManager.ROLE_ASSISTANT) == true
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && roleManager?.isRoleAvailable(RoleManager.ROLE_ASSISTANT) == true
     }
     var assistantRoleHeld by remember(roleManager) {
-        mutableStateOf(roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true)
+        mutableStateOf(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true)
     }
     fun openAssistantSettings() {
         runCatching { context.startActivity(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)) }
             .onFailure { Log.w("SolappanAssistant", "Assistant settings are unavailable") }
     }
     val assistantRoleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        assistantRoleHeld = roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
+        assistantRoleHeld = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
         if (!assistantRoleHeld) openAssistantSettings()
     }
     val contactPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -198,10 +198,11 @@ private fun AgentScreen() {
             held = assistantRoleHeld,
             onRequestRole = {
                 runCatching {
-                    roleManager
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) roleManager
                         ?.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT)
                         ?.let(assistantRoleLauncher::launch)
                         ?: openAssistantSettings()
+                    else openAssistantSettings()
                 }.onFailure { openAssistantSettings() }
             },
         )
@@ -262,10 +263,13 @@ private fun AgentScreen() {
                 modifier = Modifier.weight(1f),
                 enabled = !loading && goal.isNotBlank(),
                 onClick = {
+                    if (runtimeState.loading) return@Button
+                    val submittedGoal = goal.trim()
+                    runtimeState = runtimeState.beginRun()
                     scope.launch {
                         withContext(Dispatchers.IO) {
                             runtime.run(
-                                goal = goal.trim(),
+                                goal = submittedGoal,
                                 initialState = runtimeState,
                                 onState = { state ->
                                     withContext(Dispatchers.Main) {

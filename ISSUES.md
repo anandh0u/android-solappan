@@ -403,6 +403,14 @@ Status:
 
 COMPLETE — the project now compiles and targets SDK 35, matching the supported range of Android Gradle Plugin 8.7.3. The compatibility warning is gone.
 
+## Current audit — 2026-09-20
+
+Existing-scope runtime repairs are implemented: truthful intent failures and final state, strict argument validation, cancellation before execution, duplicate-run protection, assistant lifecycle/approval cleanup, readable persistent answers, bounded local screen context, safe multi-number contact handling, and guarded assistant-role APIs/broadcasts. Debug build, 18 unit tests and lint pass; APK installed. The nonexistent-app regression displays Failed on the phone.
+
+OPEN VALIDATION: the updated assistant tile/gesture, speech retry, approved/cancelled drafts, and interruption during multi-step actions need a fresh manual device check. Injected assist-key testing was inconclusive. Earlier completion entries are historical evidence, not fresh validation of this audit build. See AUDIT.md.
+
+NOT IMPLEMENTED: accessibility navigation/scrolling and custom Hey Sol wake-word activation. No future-session work was added.
+
 ## Blocking Rule
 
 Do not implement P2 work while major P0 issues remain.

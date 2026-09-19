@@ -33,6 +33,9 @@ data class ToolResult(
     val data: JSONObject = JSONObject(),
     val errorCode: String? = null,
 ) {
+    fun withSuccessDetails(message: String, data: JSONObject): ToolResult =
+        if (success) copy(message = message, data = data) else this
+
     fun toJson(): String = JSONObject()
         .put("success", success)
         .put("message", message)

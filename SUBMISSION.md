@@ -61,7 +61,7 @@ The third scenario demonstrates planning, multiple tools, contact lookup, privac
 
 ## Reliability
 
-- Eleven automated tests
+- Eighteen automated tests (current audit); see AUDIT.md for fresh versus historical device evidence
 - Repeated physical-device demo validation
 - Offline, permission-denied, missing-app, missing-contact, cancellation, and malformed-response testing
 - Bounded agent loop
