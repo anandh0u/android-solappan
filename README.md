@@ -11,10 +11,10 @@ Built with Codex, Kotlin, and Android native APIs. The model decides **what shou
 [Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
 
 <p align="center">
-  <video src="videos/sol-motion/renders/sol-agent-runtime.mp4" controls muted playsinline width="760" poster="docs/screenshots/assistant-demo.png"></video>
+  <video src="videos/sol-motion/renders/sol-ui-demo.mp4" controls muted playsinline width="360" poster="docs/screenshots/assistant-demo.png"></video>
 </p>
 
-<p align="center"><a href="videos/sol-motion/renders/sol-agent-runtime.mp4">Watch the SOL demo video</a></p>
+<p align="center"><a href="videos/sol-motion/renders/sol-ui-demo.mp4">Watch the SOL UI demo video</a> · <a href="videos/sol-motion/renders/sol-agent-runtime.mp4">Watch the SOL runtime concept video</a></p>
 
 Current qualification: the signed-in phone completed a real Supabase gateway → registered app-discovery tool → model continuation round trip with no provider key embedded. The synthetic on-device message test also passed approval, recipient and duplicate-send checks. This is an MVP, not a production-certified release. Real messaging-app compatibility and delivery remain unverified; see the audit for exact evidence and remaining gates.
 
@@ -36,7 +36,10 @@ flowchart LR
 
 ## The experience
 
-<p align="center"><img src="docs/screenshots/assistant-demo.png" width="280" alt="SOL assistant panel on the connected Android phone" /></p>
+<p align="center">
+  <img src="docs/screenshots/home.png" width="280" alt="SOL chat screen on the connected Android phone" />
+  <img src="docs/screenshots/assistant-demo.png" width="280" alt="SOL assistant panel on the connected Android phone" />
+</p>
 
 - **Chat:** a focused SOL conversation, microphone, Send, Stop, and a compact Setup panel.
 - **Demo access:** a visible, opt-in 10-minute grant skips repeated approvals for ordinary screen taps and typing. Tap the banner to revoke, or press Stop. Message sending and call/SMS flows still require approval; passwords, security actions and app locks remain protected. It is not unrestricted Android access.
