@@ -34,6 +34,93 @@ flowchart LR
     G --> H[Display and speak answer]
 ```
 
+## Architecture
+
+```mermaid
+flowchart TB
+    User[User: text, voice, gesture, tile or Hey SOL] --> Surface[Chat or Android assistant surface]
+    Surface --> Coordinator[Agent runtime coordinator]
+    Coordinator --> Controller[Bounded agent controller]
+    Controller --> Registry[Registered tool registry]
+    Controller <--> Gateway[Authenticated Supabase gateway]
+    Gateway <--> Model[OpenAI Responses API]
+    Registry --> Native[Android intents and native APIs]
+    Registry --> Screen[Optional restricted Accessibility service]
+    Native --> Result[Structured tool result]
+    Screen --> Result
+    Result --> Controller
+    Controller --> Surface
+```
+
+There is one agent pipeline. Chat, the Android assistant panel, the Quick Settings tile and Hey SOL are entry points—not separate agents. The model chooses from schemas supplied by the registry; the Android runtime validates parameters, manages permissions and executes only known tools.
+
+## Runtime sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as SOL surface
+    participant A as Agent controller
+    participant G as Supabase gateway
+    participant M as OpenAI
+    participant T as Tool registry
+    participant D as Android device
+
+    U->>S: Goal in text or speech
+    S->>A: Submit goal
+    A->>G: Authenticated request + tool schemas
+    G->>M: Bounded Responses request
+    M-->>A: Final text or registered tool call
+    A->>T: Validate name, JSON and risk
+    alt Protected action
+        T-->>S: Approval request
+        S-->>A: Approve or cancel
+    end
+    A->>D: Execute allowed Android action
+    D-->>A: Structured result
+    A->>G: Tool output / continuation
+    G->>M: Continue reasoning
+    M-->>S: Concise final result
+```
+
+## Security model
+
+```mermaid
+flowchart LR
+    Model[Model output is untrusted] --> Allowlist{Registered tool?}
+    Allowlist -->|No| Reject[Reject unknown tool]
+    Allowlist -->|Yes| Schema{Valid parameters?}
+    Schema -->|No| Invalid[Return structured error]
+    Schema -->|Yes| Risk{Protected action?}
+    Risk -->|No| Execute[Execute bounded tool]
+    Risk -->|Yes| Approval[Require user approval]
+    Approval -->|Denied| Cancel[Return cancelled]
+    Approval -->|Approved| Execute
+    Execute --> Verify[Return result / optional visible observation]
+```
+
+| Boundary | What SOL does |
+| --- | --- |
+| Tool authority | Rejects unknown names and extra/invalid arguments. It never runs model-generated code or shell commands. |
+| Consequential actions | Calls, SMS drafts and message sending require a separate approval grant. Cancelling or dismissing the assistant denies a pending grant. |
+| Demo access | A user-controlled 10-minute navigation grant can skip repeated approvals for ordinary taps and typing only. It expires across reboot and can be revoked. |
+| Sensitive UI | Screen tools reject password fields and sensitive labels. Generic tap cannot approve, call, purchase or send. |
+| External outcomes | Intent dispatch and a visible UI change are not treated as proof that a message delivered, music played or an alarm saved. |
+
+## Gateway and account flow
+
+```mermaid
+flowchart LR
+    Account[SOL account sign-in] --> Session[Keystore-encrypted session]
+    Session --> Gateway[Supabase Edge Function]
+    Gateway --> Verify[Verify user and account access]
+    Verify --> Quota[Reserve quota and continuation ownership]
+    Quota --> Request[Fixed model policy + registered tools]
+    Request --> Response[Sanitized response to phone]
+```
+
+The phone build uses gateway mode and does not embed the provider key. The gateway verifies the signed-in user, applies account access and quota checks, and owns model credentials. Passwords are not stored by the app. Session data is encrypted with Android Keystore in no-backup storage.
+
 ## The experience
 
 <p align="center">
@@ -60,6 +147,35 @@ Wake behavior is under fresh device validation. It is not an OEM low-power hotwo
 | | Experimental `send_message` (explicit approval) |
 
 Calls open the dialer; `prepare_sms` opens drafts. Experimental `send_message` can press a visible English-labelled Send button after approval, checking the app, exact draft and a matching visible recipient above it. It does not prove recipient semantics or delivery across arbitrary apps; WhatsApp end-to-end qualification is still pending. Generic taps cannot send. Music uses Android's standard media search/play intent for a dynamically resolved installed app, with observed UI fallback when unsupported. No playback guarantee is made. Screen control requires Accessibility consent and an unlocked phone.
+
+## Tool capability matrix
+
+| Tool family | Examples | Confirmation | Verification boundary |
+| --- | --- | --- | --- |
+| App and navigation intents | `list_apps`, `open_app`, `open_maps`, `set_alarm` | No | Android accepting an intent is not outcome proof. |
+| Contacts and communication | `find_contact`, `call_contact`, `prepare_sms` | Call/SMS yes | Calls open the dialer; SMS opens a draft. |
+| Media | `search_music`, `control_media` | No | Search intent/media-key dispatch does not prove playback. |
+| Screen observation | `observe_screen`, `scroll_screen`, `press_back`, `press_home` | No | Requires enabled Accessibility and unlocked screen. |
+| Restricted screen actions | `tap_element`, `type_text` | Yes, or active demo navigation consent | Fresh observed targets only; sensitive targets are blocked. |
+| Experimental direct send | `send_message` | Always yes | One-shot action; delivery and arbitrary-app recipient semantics remain unverified. |
+
+## Voice and assistant lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Ready
+    Ready --> Listening: Gesture, tile, wake or Talk again
+    Listening --> Thinking: Transcript received
+    Listening --> Ready: Silence / timeout / error
+    Thinking --> AwaitingApproval: Protected tool requested
+    AwaitingApproval --> Executing: User approves
+    AwaitingApproval --> Ready: User cancels or assistant closes
+    Thinking --> Executing: Low-risk tool requested
+    Executing --> Speaking: Final response
+    Speaking --> Ready: Follow-up or Talk again
+```
+
+Android speech recognition handles commands and Android TTS speaks final answers. Vosk provides the optional foreground-service Hey SOL listener. The wake listener pauses while the assistant or TTS owns the microphone, avoiding feedback and competing recorders. Full-duplex realtime voice and barge-in are not implemented.
 
 ## Try a workflow
 
@@ -91,7 +207,7 @@ The current default is **GPT-6 Astra**, using low reasoning effort. Model availa
 
 On the phone, open **Setup**, grant microphone permission, choose SOL as the default assistant, and grant contacts only for contact workflows. Enable screen control only for accessibility tools. Enable Hey SOL explicitly; its persistent notification provides a Stop action.
 
-Release builds omit the local key and require the authenticated Supabase gateway. The gateway and SQL migration are deployed; live authentication, access controls, quota enforcement and conversation-isolation smoke tests passed. The current phone build uses gateway mode and also excludes the provider key. Create/verify a SOL beta account in Setup, obtain owner approval and sign in. CLI/dashboard login is not an app account. Device sign-in/refresh and full agent workflows still require qualification. See [gateway setup and privacy boundaries](docs/GATEWAY.md). **Never distribute a developer-mode APK containing a provider key.**
+Release builds omit the local key and require the authenticated Supabase gateway. The gateway and SQL migration are deployed; live authentication, access controls, quota enforcement and conversation-isolation smoke tests passed. The current phone build uses gateway mode and also excludes the provider key. Create and verify a SOL account in Setup, obtain owner approval and sign in. CLI/dashboard login is not an app account. Device sign-in/refresh and full agent workflows still require qualification. See [gateway setup and privacy boundaries](docs/GATEWAY.md). **Never distribute a developer-mode APK containing a provider key.**
 
 ## Runtime boundaries
 
@@ -106,6 +222,16 @@ Intent acceptance means Android received a request. It does not prove that an al
 **Hackathon prototype / technical alpha.** Android has 42 passing unit tests and the gateway has 10 passing local policy/auth tests; debug/instrumentation assembly and lint pass. Hosted gateway smoke tests and a signed-in phone tool round trip passed. The user confirmed unlocked Hey SOL invocation. Synthetic on-device sending passed without contacting anyone; real messaging-app delivery and broader release qualification remain open. [AUDIT.md](AUDIT.md) records the evidence.
 
 Production work includes qualifying signed-in phone workflows, OEM/battery behavior, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These remain tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). CI checks Android compilation/tests/lint, instrumentation-test compilation, release key exclusion and gateway policy/authentication tests. Passing CI is not proof of device or public-release readiness.
+
+## Evidence at a glance
+
+| Evidence | Current result |
+| --- | --- |
+| Android quality gate | 42 unit tests, debug and instrumentation APK assembly, and lint pass. |
+| Gateway quality gate | 10 policy/authentication tests plus hosted authentication, quota and continuation smoke tests. |
+| Phone evidence | Signed-in gateway tool round trip, synthetic approved-send control path, unlocked Hey SOL invocation and final APK launch. |
+| Demo material | Real phone UI screenshots, a 7-second UI demo clip and an 8-second architecture concept animation. |
+| Open limits | Real WhatsApp delivery, arbitrary-app semantic safety, OEM wake/battery behavior, full-duplex audio and release/privacy qualification. |
 
 ## Explore the repository
 
