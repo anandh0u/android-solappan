@@ -469,6 +469,11 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
                 SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Speech recognition needs a working network connection."
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is required."
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The speech recognizer is busy."
+                SpeechRecognizer.ERROR_SERVER_DISCONNECTED -> {
+                    speechRecognizer?.destroy()
+                    speechRecognizer = null
+                    "Android restarted its speech service after the app change. SOL is still open; tap Talk again, or type in SOL."
+                }
                 SpeechRecognizer.ERROR_AUDIO -> "Android could not record audio. Close other microphone apps, then tap Talk again."
                 SpeechRecognizer.ERROR_CLIENT -> "Speech recognition was interrupted. Tap Talk again, or type in SOL."
                 SpeechRecognizer.ERROR_SERVER -> "The speech service is unavailable. Try again later, or type in SOL."

@@ -4,6 +4,7 @@
 
 - Added explicit 10-minute demo navigation consent for ordinary taps/typing, with runtime expiry/revocation checks. Sending and call/SMS approvals remain mandatory; app locks are not bypassed.
 - Replaced sparkle branding with an S monogram and SOL name. Clarified speech provider errors and empty/cancelled transcript recovery. A current Android 11+ package-visibility repair declares `android.speech.RecognitionService`; the selected Google recognizer now reaches SOL's live Listening state on the connected phone. A fresh spoken transcript check remains open.
+- Android speech-service disconnect (`ERROR_SERVER_DISCONNECTED`, code 11) now destroys the stale recognizer and keeps the SOL panel available with a clear Talk-again/type fallback. Current device logs contain no Java crash; recent exits were installs/force-stops plus one older low-memory event. A new reproducible crash trace is still needed if instability continues.
 - Real WhatsApp self-message attempt opened WhatsApp but failed at tap/observation after returning to SOL approval. User confirmed WhatsApp locks whenever left. Nothing was drafted or sent. App lock and main-activity foreground handoff must be distinguished in a future unlocked test.
 
 ## Signed-in phone follow-up — latest
