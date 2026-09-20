@@ -221,7 +221,7 @@ internal class PrepareSmsTool(context: Context) : ContextTool(context) {
 internal class ControlMediaTool(context: Context) : ContextTool(context) {
     override val name = "control_media"
     override val description =
-        "Control the active Android media session. Use only when the user asks to play, pause, skip to the next item, or return to the previous item."
+        "Control a known active Android media session when the user explicitly asks to play, pause, skip to the next item, or return to the previous item. This controls the active session; it cannot select a specific search result."
     override val parameters = JSONObject(
         """{"type":"object","properties":{"action":{"type":"string","enum":["play","pause","next","previous"]}},"required":["action"],"additionalProperties":false}""",
     )
@@ -260,7 +260,7 @@ internal class ControlMediaTool(context: Context) : ContextTool(context) {
 internal class SearchMusicTool(context: Context) : ContextTool(context) {
     override val name = "search_music"
     override val description =
-        "Ask an installed music app to search and play a user-provided query through Android's standard media intent. Provider is the installed app's visible name. If unsupported, use open_app and observed UI tools instead. Dispatch does not prove playback."
+        "Ask an installed music app to search a user-provided query through Android's standard media intent. Provider is the installed app's visible name. Use this once for a named-song request; never use screen tools or a global media key to select a third-party music result. Dispatch does not prove exact-result playback."
     override val parameters = JSONObject(
         """{"type":"object","properties":{"query":{"type":"string"},"provider":{"type":"string"}},"required":["query","provider"],"additionalProperties":false}""",
     )
