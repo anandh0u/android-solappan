@@ -23,6 +23,8 @@ Calls open the dialer and messages open drafts. Direct `send_message` remains ex
 
 ## Demonstration
 
+[Watch the recorded SOL demo / pitch video](https://drive.google.com/drive/folders/11loQKqyGb1A48FmHeaw9Y1IQ5X1SPlkI).
+
 1. “Open Spotify.”
 2. “Set an alarm for 7 AM and navigate to GEC Thrissur.”
 3. “Prepare a message to Afnan saying I will reach 20 minutes late.”

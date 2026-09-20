@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.app.assist.AssistContent
 import android.app.assist.AssistStructure
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -359,14 +360,27 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             showSpeechError("Microphone permission required", "Open SOL and enable the assistant microphone.")
             return
         }
-        if (!SpeechRecognizer.isRecognitionAvailable(sessionContext)) {
-            showSpeechError("Speech unavailable", "No Android speech recognizer is available on this device.")
+        val systemRecognizerAvailable = SpeechRecognizer.isRecognitionAvailable(sessionContext)
+        val onDeviceRecognizerAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(sessionContext)
+        if (!systemRecognizerAvailable && !onDeviceRecognizerAvailable) {
+            showSpeechError(
+                "Speech unavailable",
+                "Android did not expose its selected speech service. Tap Talk again, or type in SOL.",
+            )
             return
         }
 
         if (speechRecognizer == null) {
             speechRecognizer = runCatching {
-                SpeechRecognizer.createSpeechRecognizer(sessionContext).apply {
+                val recognizer = if (systemRecognizerAvailable) {
+                    Log.i(TAG, "Using Android selected speech recognizer")
+                    SpeechRecognizer.createSpeechRecognizer(sessionContext)
+                } else {
+                    Log.i(TAG, "Using Android on-device speech recognizer fallback")
+                    SpeechRecognizer.createOnDeviceSpeechRecognizer(sessionContext)
+                }
+                recognizer.apply {
                     setRecognitionListener(SessionRecognitionListener(recognitionGeneration))
                 }
             }.getOrElse {

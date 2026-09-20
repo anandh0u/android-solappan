@@ -8,15 +8,19 @@ Give SOL a goal. It reasons through the task, chooses registered Android tools, 
 
 Built with Codex, Kotlin, and Android native APIs. The model decides **what should happen**; the runtime decides **what is allowed and how it happens**.
 
-[Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
+[Watch the recorded demo / pitch video](https://drive.google.com/drive/folders/11loQKqyGb1A48FmHeaw9Y1IQ5X1SPlkI) · [Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
 
 <p align="center">
   <video src="videos/sol-motion/renders/sol-ui-demo.mp4" controls muted playsinline width="360" poster="docs/screenshots/assistant-demo.png"></video>
 </p>
 
-<p align="center"><a href="videos/sol-motion/renders/sol-ui-demo.mp4">Watch the SOL UI demo video</a> · <a href="videos/sol-motion/renders/sol-agent-runtime.mp4">Watch the SOL runtime concept video</a></p>
+<p align="center"><a href="https://drive.google.com/drive/folders/11loQKqyGb1A48FmHeaw9Y1IQ5X1SPlkI">Watch the recorded SOL demo / pitch video</a> · <a href="videos/sol-motion/renders/sol-ui-demo.mp4">Watch the short SOL UI clip</a> · <a href="videos/sol-motion/renders/sol-agent-runtime.mp4">Watch the runtime concept animation</a></p>
 
 Current qualification: the signed-in phone completed a real Supabase gateway → registered app-discovery tool → model continuation round trip with no provider key embedded. The synthetic on-device message test also passed approval, recipient and duplicate-send checks. This is an MVP, not a production-certified release. Real messaging-app compatibility and delivery remain unverified; see the audit for exact evidence and remaining gates.
+
+## Problem and solution
+
+AI can reason well on mobile, but it is often trapped in a chat interface while people still switch manually among apps. SOL turns one high-level goal into a transparent Android workflow: the model selects from registered tools, while the runtime validates each action and asks for approval where consequences exist.
 
 ## One goal, multiple actions
 
@@ -121,7 +125,7 @@ flowchart LR
 
 The phone build uses gateway mode and does not embed the provider key. The gateway verifies the signed-in user, applies account access and quota checks, and owns model credentials. Passwords are not stored by the app. Session data is encrypted with Android Keystore in no-backup storage.
 
-## The experience
+## Features and screenshots
 
 <p align="center">
   <img src="docs/screenshots/home.png" width="280" alt="SOL chat screen on the connected Android phone" />
@@ -216,6 +220,14 @@ Only registered tools execute. The registry rejects unknown tools and invalid ar
 Contact lookup returns IDs and display names, keeping raw numbers out of its tool result. Explicit screen context can still contain private visible information. Password filtering is not comprehensive screenshot redaction. Local context clearing does not guarantee provider-side deletion.
 
 Intent acceptance means Android received a request. It does not prove that an alarm was saved, navigation began, or music played. Screen observation verifies visible state, not real-world outcomes.
+
+## Codex and OpenAI usage
+
+Codex was used to build, test, debug and document the Android runtime. SOL uses the OpenAI Responses API through an authenticated Supabase Edge Function; the model receives registered tool schemas and the Android app independently validates every requested action. Provider credentials are held by the gateway, never committed to the repository or packaged in the release app.
+
+## Live / hosted project
+
+SOL is a native Android application rather than a hosted website. The public recorded device demo is available in [Google Drive](https://drive.google.com/drive/folders/11loQKqyGb1A48FmHeaw9Y1IQ5X1SPlkI); build and install instructions are above.
 
 ## Release status
 
