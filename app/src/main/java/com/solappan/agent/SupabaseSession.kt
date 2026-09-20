@@ -25,7 +25,7 @@ class SupabaseSession(context: Context) {
     val gatewayUrl: String get() = "$baseUrl/functions/v1/agent-gateway"
 
     fun signIn(email: String, password: String) = locked {
-        require(email.contains('@') && password.isNotEmpty()) { "Enter your beta account email and password." }
+        require(email.contains('@') && password.isNotEmpty()) { "Enter your SOL account email and password." }
         val session = auth("token?grant_type=password", JSONObject().put("email", email.trim()).put("password", password))
         save(session)
     }
@@ -39,7 +39,7 @@ class SupabaseSession(context: Context) {
     fun accountEmail(): String? = locked { read()?.optJSONObject("user")?.optString("email") }
 
     fun accessToken(): String = locked {
-        var session = read() ?: throw IOException("Sign in to your SOL beta account in Setup.")
+        var session = read() ?: throw IOException("Sign in to your SOL account in Setup.")
         if (session.optLong("expires_at") <= System.currentTimeMillis() / 1000 + 60) {
             try {
                 session = auth("token?grant_type=refresh_token", JSONObject().put("refresh_token", session.getString("refresh_token")))
@@ -72,8 +72,13 @@ class SupabaseSession(context: Context) {
             connection.outputStream.bufferedWriter().use { it.write(body.toString()) }
             val status = connection.responseCode
             if (status !in 200..299) {
-                if (status in listOf(400, 401, 403)) throw AuthRejected("Sign-in rejected. Check your email/password and email verification.")
-                throw IOException(if (status == 429) "Too many attempts. Wait before trying again." else "Account service unavailable. Try again later.")
+                val code = runCatching {
+                    val errorText = connection.errorStream?.bufferedReader()?.use { it.readText().take(8192) }.orEmpty()
+                    JSONObject(errorText).optString("error_code")
+                }.getOrDefault("")
+                val message = accountErrorMessage(status, code)
+                if (status in listOf(400, 401, 403)) throw AuthRejected(message)
+                throw IOException(message)
             }
             val text = connection.inputStream.bufferedReader().use { it.readText() }
             if (text.isBlank()) JSONObject() else JSONObject(text)

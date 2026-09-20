@@ -10,6 +10,8 @@ Built with Codex, Kotlin, and Android native APIs. The model decides **what shou
 
 [Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
 
+Current qualification: the signed-in phone completed a real Supabase gateway → registered app-discovery tool → model continuation round trip with no provider key embedded. This is an MVP, not a production-certified release. Cross-app message sending remains experimental and its device qualification is blocked by an unbound accessibility service; see the audit for exact evidence and remaining gates.
+
 ## One goal, multiple actions
 
 ```mermaid

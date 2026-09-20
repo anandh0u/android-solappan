@@ -1,5 +1,12 @@
 # Hackathon Issues
 
+## Signed-in phone follow-up — latest
+
+- Passed: real phone-side saved-login gateway round trip with registered list_apps and model continuation; no provider key embedded.
+- Fixed: account labels and actionable, sanitized verification/credential errors.
+- Blocked: synthetic message-send device qualification. Instrumentation force-stopped SOL and left accessibility crashed/unbound. User must toggle SOL screen control off/on before a no-restart retry. No external message was sent.
+- Remaining production gates in GitHub #1–#6 are not superseded by this successful gateway test.
+
 ## Deployment and dynamic-runtime update — latest
 
 - Supabase database migration, Edge Function and server-only model credentials deployed. Live smoke tests passed for Auth login, beta denial/approval, database grants, quota increments/denial and same-user/cross-user continuation. Temporary test accounts and provider responses removed.

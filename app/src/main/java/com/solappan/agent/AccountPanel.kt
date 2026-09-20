@@ -32,7 +32,7 @@ internal fun AccountPanel() {
         if (BuildConfig.SUPABASE_URL.isBlank()) {
             Text("Account gateway is not configured in this build.")
         } else if (account == null) {
-            Text("Beta account · your account must be enabled by the project owner.")
+            Text("SOL account")
             OutlinedTextField(email, { email = it }, label = { Text("Email") }, singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(password, { password = it }, label = { Text("Password") },
                 visualTransformation = PasswordVisualTransformation(), singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
@@ -42,7 +42,7 @@ internal fun AccountPanel() {
                 password = ""
                 scope.launch {
                     val result = withContext(Dispatchers.IO) { runCatching { session.signIn(email, suppliedPassword); session.accountEmail() } }
-                    result.onSuccess { account = it; message = "Signed in. Your account must also be enabled for beta access." }
+                    result.onSuccess { account = it; message = "Signed in." }
                         .onFailure { message = it.message ?: "Sign-in failed safely." }
                     busy = false
                 }
@@ -54,11 +54,11 @@ internal fun AccountPanel() {
                 password = ""
                 scope.launch {
                     val result = withContext(Dispatchers.IO) { runCatching { session.signUp(suppliedEmail, suppliedPassword) } }
-                    message = if (result.isSuccess) "Check your email for verification, then sign in. The project owner must enable beta access."
+                    message = if (result.isSuccess) "Check your email for verification, then sign in. The project owner must approve account access."
                         else "Account creation failed. Check the address, password requirements and network, or try signing in."
                     busy = false
                 }
-            }) { Text("Create beta account") }
+            }) { Text("Create account") }
         } else {
             Text("Signed in: $account")
             OutlinedButton(enabled = !busy, onClick = {

@@ -11,6 +11,8 @@ import org.json.JSONObject
 class MessageSendDeviceTest {
     @Test fun testConfirmedSendAndDuplicatePrevention() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
+        // UiAutomation otherwise suppresses the service being tested.
+        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
         val testPackage = instrumentation.context.packageName
         instrumentation.context.startActivity(Intent().setClassName(testPackage, FakeConversationActivity::class.java.name)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))

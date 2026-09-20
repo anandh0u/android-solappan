@@ -1,5 +1,13 @@
 # Current audit — 2026-09-20
 
+## Signed-in phone verification — latest
+
+- Saved encrypted SOL login completed a real phone-side gateway → registered list_apps → model continuation test. The test asserted gateway mode and an empty embedded provider key.
+- Account UI no longer labels login as beta; known authentication errors distinguish unverified email from invalid credentials without exposing raw server messages.
+- Android unit tests, debug APK, instrumentation APK and lint build passed after these changes.
+- Synthetic send test remains blocked before observation. Android exit history explicitly records force-stop due to instrumentation; accessibility is subsequently marked crashed. Keeping accessibility enabled in UiAutomation was insufficient. A no-restart retry could not recover the already-unbound service. A user off/on toggle and fresh device test are required; no real message was sent.
+- This is a tested gateway-backed MVP, not a completed production release. Existing GitHub release gates remain open.
+
 ## Deployed gateway and dynamic runtime — newest evidence
 
 - Supabase migration and Edge Function deployed to the linked project. OPENAI_API_KEY and OPENAI_MODEL configured only on the server. Live smoke tests passed for login, beta rejection/approval, client table/RPC denial, model response, continuation ownership, quota increments and daily quota exhaustion. Temporary test accounts and provider responses deleted after testing.
