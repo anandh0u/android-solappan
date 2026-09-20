@@ -60,6 +60,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     private lateinit var approveButton: Button
     private lateinit var retryButton: Button
     private var speechRecognizer: SpeechRecognizer? = null
+    private var recognitionTimeout: Job? = null
     private var listening = false
     private var uiVisible = false
     private var pendingConfirmation: CompletableDeferred<Boolean>? = null
@@ -124,7 +125,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         )
 
         panel.addView(TextView(sessionContext).apply {
-            text = "✦"
+            text = "S"
             textSize = 30f
             gravity = Gravity.CENTER
             setTextColor(Color.rgb(33, 17, 11))
@@ -132,7 +133,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         }, LinearLayout.LayoutParams(dp(64), dp(64)))
 
         panel.addView(TextView(sessionContext).apply {
-            text = "SOL  /  ANDROID AGENT"
+            text = "SOL"
             textSize = 13f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             gravity = Gravity.CENTER
@@ -237,6 +238,17 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
             setOnClickListener { startListening() }
         }
         panel.addView(retryButton.withTopMargin(12))
+
+        panel.addView(Button(sessionContext).apply {
+            text = "Type in SOL"
+            isAllCaps = false
+            setOnClickListener {
+                stopListening()
+                sessionContext.startActivity(Intent(sessionContext, com.solappan.agent.MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                finish()
+            }
+        }.withTopMargin(8))
 
         panel.addView(Button(sessionContext).apply {
             text = "Close SOL"
@@ -344,7 +356,7 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         }
 
         if (sessionContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            showSpeechError("Microphone permission required", "Open Solappan and enable the assistant microphone.")
+            showSpeechError("Microphone permission required", "Open SOL and enable the assistant microphone.")
             return
         }
         if (!SpeechRecognizer.isRecognitionAvailable(sessionContext)) {
@@ -365,6 +377,14 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
         statusText.text = "Listening…"
         if (!preserveAnswer) transcriptText.text = "Speak your request, or say Close SOL"
         listening = true
+        val timeoutGeneration = recognitionGeneration
+        recognitionTimeout = sessionScope.launch {
+            delay(20_000)
+            if (uiVisible && listening && recognitionGeneration == timeoutGeneration) {
+                stopListening()
+                showSpeechError("Speech timed out", "Android did not return a transcript. Tap Talk again, or type in SOL.")
+            }
+        }
         try { speechRecognizer?.startListening(
             Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -377,6 +397,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     }
 
     private fun stopListening() {
+        recognitionTimeout?.cancel()
+        recognitionTimeout = null
         recognitionGeneration++
         val wasListening = listening
         listening = false
@@ -384,6 +406,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
     }
 
     private fun showSpeechError(title: String, detail: String) {
+        recognitionTimeout?.cancel()
+        recognitionTimeout = null
         listening = false
         statusText.text = title
         transcriptText.text = detail
@@ -414,6 +438,8 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
 
         override fun onError(error: Int) {
             if (!isCurrent()) return
+            recognitionTimeout?.cancel()
+            recognitionTimeout = null
             if (error in setOf(SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT) &&
                 lastSpokenText != null) {
                 listening = false
@@ -429,13 +455,18 @@ class SolVoiceInteractionSession(private val sessionContext: Context) : VoiceInt
                 SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Speech recognition needs a working network connection."
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is required."
                 SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "The speech recognizer is busy."
-                else -> "Speech recognition failed safely."
+                SpeechRecognizer.ERROR_AUDIO -> "Android could not record audio. Close other microphone apps, then tap Talk again."
+                SpeechRecognizer.ERROR_CLIENT -> "Speech recognition was interrupted. Tap Talk again, or type in SOL."
+                SpeechRecognizer.ERROR_SERVER -> "The speech service is unavailable. Try again later, or type in SOL."
+                else -> "Speech recognition is unavailable (code $error). Tap Talk again, or type in SOL."
             }
             showSpeechError("Try again", message)
         }
 
         override fun onResults(results: Bundle?) {
             if (!isCurrent()) return
+            recognitionTimeout?.cancel()
+            recognitionTimeout = null
             listening = false
             val transcript = results
                 ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)

@@ -7,6 +7,27 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ToolRegistryTest {
+    @Test fun `temporary navigation consent is rechecked before execution`() {
+        var granted = true
+        var executions = 0
+        val tool = object : AgentTool {
+            override val name = "tap_element"
+            override val description = "Navigation test"
+            override val parameters = JSONObject("""{"type":"object","properties":{},"additionalProperties":false}""")
+            override val riskLevel = RiskLevel.MEDIUM
+            override val requiresConfirmation = true
+            override fun confirmationSummary(arguments: JSONObject) = "Tap"
+            override fun execute(arguments: JSONObject): ToolResult { executions++; return ToolResult(true, "executed") }
+        }
+        val tested = ToolRegistry(listOf(tool)) { granted && com.solappan.agent.DemoAccess.eligible(it) }
+        assertEquals(null, tested.confirmationRequest(tool.name, "{}"))
+        assertTrue(tested.execute(tool.name, "{}").success)
+        granted = false
+        assertEquals("CONFIRMATION_REQUIRED", tested.execute(tool.name, "{}").errorCode)
+        assertEquals(1, executions)
+        assertEquals("INVALID_PARAMETERS", tested.execute(tool.name, """{"extra":true}""").errorCode)
+    }
+
     private val registry = ToolRegistry.sessionTwo()
 
     @Test

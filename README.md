@@ -10,6 +10,8 @@ Built with Codex, Kotlin, and Android native APIs. The model decides **what shou
 
 [Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
 
+[Watch the SOL agent-runtime concept animation](videos/sol-motion/renders/sol-agent-runtime.mp4) · [Animation source](videos/sol-motion/)
+
 Current qualification: the signed-in phone completed a real Supabase gateway → registered app-discovery tool → model continuation round trip with no provider key embedded. The synthetic on-device message test also passed approval, recipient and duplicate-send checks. This is an MVP, not a production-certified release. Real messaging-app compatibility and delivery remain unverified; see the audit for exact evidence and remaining gates.
 
 ## One goal, multiple actions
@@ -33,9 +35,10 @@ flowchart LR
 <p align="center"><img src="docs/screenshots/home.png" width="280" alt="SOL running on the connected Android phone" /></p>
 
 - **Chat:** a focused SOL conversation, microphone, Send, Stop, and a compact Setup panel.
+- **Demo access:** a visible, opt-in 10-minute grant skips repeated approvals for ordinary screen taps and typing. Tap the banner to revoke, or press Stop. Message sending and call/SMS flows still require approval; passwords, security actions and app locks remain protected. It is not unrestricted Android access.
 - **System assistant:** invoke with the Android gesture or SOL Quick Settings tile. SOL stays open after a command; use **Close SOL**, or say “Close SOL” during an active listening turn.
 - **Follow-ups:** three recent text turns provide bounded, in-memory context. Screenshots and approval grants are not retained as conversation memory.
-- **Voice:** Android recognizes commands; Android TTS speaks final answers. After speech output, the assistant offers a follow-up listening turn. Silence leaves the panel available with **Talk again**.
+- **Voice:** Android recognizes commands; Android TTS speaks final answers. After speech output, the assistant offers a follow-up listening turn. Silence leaves the panel available with **Talk again**. A 20-second watchdog prevents an indefinitely stuck recognizer; **Type in SOL** is always available as a fallback.
 - **Optional wake phrase:** an offline Vosk listener with a bundled small English model listens for **Hey SOL** while its foreground service is enabled. Microphone ownership is coordinated with chat, assistant listening, and speech output.
 
 Wake behavior is under fresh device validation. It is not an OEM low-power hotword implementation, and continuous use has a battery cost. The gesture and tile remain available.
@@ -93,7 +96,7 @@ Intent acceptance means Android received a request. It does not prove that an al
 
 ## Release status
 
-**Hackathon prototype / technical alpha.** Android has 39 passing unit tests and the gateway has 10 passing local policy/auth tests; debug/instrumentation assembly and lint pass. Hosted gateway smoke tests and a signed-in phone tool round trip passed. The user confirmed unlocked Hey SOL invocation. Synthetic on-device sending passed without contacting anyone; real messaging-app delivery and broader release qualification remain open. [AUDIT.md](AUDIT.md) records the evidence.
+**Hackathon prototype / technical alpha.** Android has 42 passing unit tests and the gateway has 10 passing local policy/auth tests; debug/instrumentation assembly and lint pass. Hosted gateway smoke tests and a signed-in phone tool round trip passed. The user confirmed unlocked Hey SOL invocation. Synthetic on-device sending passed without contacting anyone; real messaging-app delivery and broader release qualification remain open. [AUDIT.md](AUDIT.md) records the evidence.
 
 Production work includes qualifying signed-in phone workflows, OEM/battery behavior, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These remain tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). CI checks Android compilation/tests/lint, instrumentation-test compilation, release key exclusion and gateway policy/authentication tests. Passing CI is not proof of device or public-release readiness.
 

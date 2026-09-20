@@ -1,5 +1,11 @@
 # Architecture Decision Log
 
+## ADR-032 — Expiring demo navigation consent
+
+User-requested demo access is implemented as a separate explicit UI opt-in for ordinary tap_element/type_text only, not unrestricted access. A no-backup grant is tied to Android boot count and monotonic expiry (10 minutes), read fresh across SOL processes and rechecked by the registry at execution. Revocation and Stop remove it. Unknown tools, schema checks, sensitive-target guards and send/call/SMS confirmation remain unchanged. This reduces navigation approval switching without bypassing app locks. Model output cannot create grants.
+
+SOL is the user-facing name; the former sparkle icon is replaced by an S monogram. Speech failures retain manual retry and text fallback, with specific provider/audio errors instead of generic safe-failure wording. Intermittent provider failure is not claimed eliminated without human voice testing.
+
 ## ADR-031 — Dynamic app discovery and confirmed message sending
 
 Remove app-package shortcut tables and Spotify-only routing. Resolve real installed labels and expose list_apps; use the standard media search/play intent or observed UI when unsupported. Server model selection moves to OPENAI_MODEL, while safety caps and registered capabilities remain enforced. Remove echo from the phone registry to match gateway policy.

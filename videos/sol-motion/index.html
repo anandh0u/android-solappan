@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><title>SOL · Goals into action</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+:root{--bg:#141722;--amber:#F4B66A;--mint:#4FE0B5;--ink:#F4F1EB;--muted:#B8BCC9;--line:#404653}
+*{box-sizing:border-box}html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:var(--bg);font-family:system-ui,sans-serif;color:var(--ink)}
+#stage{position:relative;width:100%;height:100%}.clip{position:absolute;inset:0}.scene-content{width:100%;height:100%;padding:96px 128px;display:flex;flex-direction:column;justify-content:space-between}
+.top,.bottom{display:flex;justify-content:space-between;align-items:center}.brand{display:flex;gap:22px;align-items:center;font-size:38px;letter-spacing:8px;font-weight:750}.mark{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border:2px solid var(--amber);border-radius:18px;color:var(--amber);font-size:43px;letter-spacing:0}.track{font-size:24px;letter-spacing:3px;color:var(--muted)}
+.caption-stage{display:grid;flex:1;align-content:center;gap:22px}.caption-line{display:flex;align-items:baseline;gap:32px;line-height:1.05}.word{display:inline-block;font-size:118px;font-weight:750;letter-spacing:-6px}.word--emphasis{color:var(--amber)}.number{color:var(--mint);font-size:25px;letter-spacing:2px;width:58px;flex-shrink:0}.bottom{font-size:23px;letter-spacing:1px;color:var(--muted);padding-top:26px;border-top:1px solid var(--line)}
+#final{display:flex;flex-direction:column;gap:20px;justify-content:center;grid-area:1/1}#sequence{display:flex;flex-direction:column;gap:30px;grid-area:1/1}.final-title{font-size:236px;font-weight:800;letter-spacing:-14px;line-height:1;color:var(--amber)}.tagline{font-size:58px;letter-spacing:-2px}.subline{font-size:30px;color:var(--muted)}
+</style></head><body>
+<div id="stage" data-composition-id="sol-motion" data-start="0" data-duration="8" data-fps="30" data-width="1920" data-height="1080">
+<div id="sol-shot" class="clip" data-start="0" data-duration="8" data-track-index="0"><div class="scene-content">
+<div class="top"><div class="brand"><span class="mark">S</span><span>SOL</span></div><div class="track">TRACK 04 / PRODUCTIVITY &amp; AUTOMATION</div></div>
+<div class="caption-stage"><div id="sequence">
+<div class="caption-line" id="goal"><span class="number">01</span><span class="word">Your</span><span class="word word--emphasis">goal.</span></div>
+<div class="caption-line" id="tools"><span class="number">02</span><span class="word">Android</span><span class="word word--emphasis">tools.</span></div>
+<div class="caption-line" id="result"><span class="number">03</span><span class="word">Less</span><span class="word word--emphasis">busywork.</span></div>
+</div><div id="final"><div class="final-title">SOL</div><div class="tagline">An agent runtime for Android.</div><div class="subline">Goal → registered tools → execution → verification</div></div></div>
+<div class="bottom"><span>BUILT WITH CODEX</span><span>CONCEPT ANIMATION · NOT APP FOOTAGE</span></div>
+</div></div></div>
+<script>
+// Adapted from HyperFrames caption-editorial-emphasis: word scale reveal,
+// emphasized line slide and discrete block replacement. Fixed layout avoids
+// runtime font measurements. One seek-safe timeline controls the entire shot.
+const tl=gsap.timeline({paused:true});const BEATS=[0.2,1.8,3.4,5.4];
+tl.fromTo('#goal',{autoAlpha:0,scale:1.12},{autoAlpha:1,scale:1,duration:.48,ease:'power4.out',transformOrigin:'left center'},BEATS[0]);
+tl.fromTo('#tools',{autoAlpha:0,x:-120},{autoAlpha:1,x:0,duration:.48,ease:'expo.out'},BEATS[1]);
+tl.fromTo('#result',{autoAlpha:0,y:60},{autoAlpha:1,y:0,duration:.5,ease:'circ.out'},BEATS[2]);
+tl.set('#sequence',{opacity:0},BEATS[3]);
+tl.fromTo('#final',{autoAlpha:0,y:36},{autoAlpha:1,y:0,duration:.55,ease:'power3.out'},BEATS[3]);
+window.__timelines['sol-motion']=tl;tl.seek(0);
+</script></body></html>

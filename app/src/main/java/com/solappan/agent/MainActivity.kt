@@ -139,6 +139,12 @@ private fun SolChatScreen() {
     val keyboard = LocalSoftwareKeyboardController.current
     val listState = rememberLazyListState()
     var showSetup by remember { mutableStateOf(false) }
+    val demoAccess = remember { DemoAccess(context) }
+    var demoActive by remember { mutableStateOf(demoAccess.active()) }
+    var showDemoConsent by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) { demoActive = demoAccess.active(); kotlinx.coroutines.delay(1000) }
+    }
     var pendingApproval by remember { mutableStateOf<PendingApproval?>(null) }
     var approvalReady by remember { mutableStateOf(false) }
     var approvalReviewed by remember { mutableStateOf(false) }
@@ -190,10 +196,10 @@ private fun SolChatScreen() {
     val speechAvailable = remember { speechIntent.resolveActivity(context.packageManager) != null }
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         speechActive = false
-        if (result.resultCode == Activity.RESULT_OK) {
-            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()?.trim()?.takeIf(String::isNotEmpty)?.let { voiceTranscript = it }
-        }
+        val transcript = if (result.resultCode == Activity.RESULT_OK)
+            result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim() else null
+        if (!transcript.isNullOrBlank()) voiceTranscript = transcript
+        else localError = "No speech captured. Tap Mic to retry or type your request."
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -371,6 +377,16 @@ private fun SolChatScreen() {
         }
     }
 
+    if (showDemoConsent) AlertDialog(
+        onDismissRequest = { showDemoConsent = false },
+        title = { Text("Enable demo access?") },
+        text = { Text("For 10 minutes, SOL can tap ordinary controls and type without repeated approval. Sending messages and call/SMS flows still ask. Passwords, security actions and app locks remain protected. Only use this on a supervised demo device.") },
+        confirmButton = { TextButton(onClick = {
+            runCatching { demoAccess.enable() }.onFailure { localError = "Could not enable demo access." }
+            demoActive = demoAccess.active(); showDemoConsent = false
+        }) { Text("Enable for 10 minutes") } },
+        dismissButton = { TextButton(onClick = { showDemoConsent = false }) { Text("Cancel") } },
+    )
     pendingApproval?.let { pending ->
         ApprovalDialog(
             pending.request,
@@ -384,6 +400,9 @@ private fun SolChatScreen() {
 
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 18.dp)) {
         SolHeader(wakeEnabled, ::toggleWakeWord) { showSetup = !showSetup }
+        TextButton(enabled = !runtimeState.loading, onClick = {
+            if (demoActive) { demoAccess.disable(); demoActive = false } else showDemoConsent = true
+        }) { Text(if (demoActive) "Demo access ON · tap to revoke" else "Demo access · Off") }
 
         LazyColumn(
             state = listState,
@@ -442,6 +461,8 @@ private fun SolChatScreen() {
                 Spacer(Modifier.width(10.dp))
                 Text(stateLabel(runtimeState.agentState), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = {
+                    demoAccess.disable()
+                    demoActive = false
                     pendingApproval?.decision?.complete(false)
                     pendingApproval = null
                     runJob?.cancel()
@@ -491,15 +512,14 @@ private fun SolHeader(wakeEnabled: Boolean, onWakeToggle: () -> Unit, onSetupTog
     Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier.size(46.dp).background(
-                Brush.linearGradient(listOf(Color(0xFF8B7CFF), Color(0xFF4FE0B5))),
+                Brush.linearGradient(listOf(Color(0xFFC78038), Color(0xFF805020))),
                 CircleShape,
             ),
             contentAlignment = Alignment.Center,
-        ) { Text("✦", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+        ) { Text("S", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text("SOL", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text("Android agent", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
         }
         TextButton(onClick = onWakeToggle) { Text(if (wakeEnabled) "Hey SOL: On" else "Hey SOL: Off") }
         TextButton(onClick = onSetupToggle) { Text("Setup") }
@@ -514,7 +534,7 @@ private fun EmptyConversation() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.size(92.dp).background(Color(0xFF202432), CircleShape), contentAlignment = Alignment.Center) {
-            Text("✦", color = MaterialTheme.colorScheme.secondary, fontSize = 46.sp)
+            Text("SOL", color = MaterialTheme.colorScheme.secondary, fontSize = 46.sp, fontWeight = FontWeight.Bold)
         }
         Text("What can I do for you?", fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
         Text("Type, tap Mic, or enable Hey SOL", color = MaterialTheme.colorScheme.onSurfaceVariant)

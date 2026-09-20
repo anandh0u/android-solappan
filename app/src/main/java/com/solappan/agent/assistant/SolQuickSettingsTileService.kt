@@ -20,7 +20,7 @@ class SolQuickSettingsTileService : TileService() {
     override fun onClick() {
         super.onClick()
         if (!isSolAssistant()) {
-            Toast.makeText(this, "Select Solappan as your default assistant in Settings.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Select SOL as your default assistant in Settings.", Toast.LENGTH_LONG).show()
             return
         }
         unlockAndRun {

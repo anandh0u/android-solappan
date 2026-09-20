@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-class ToolRegistry(tools: List<AgentTool>) {
+class ToolRegistry(tools: List<AgentTool>, private val demoConsent: (String) -> Boolean = { false }) {
     private val toolsByName: Map<String, AgentTool> = tools.associateBy { it.name }.also {
         require(it.size == tools.size) { "Tool names must be unique." }
     }
@@ -18,7 +18,7 @@ class ToolRegistry(tools: List<AgentTool>) {
 
     fun confirmationRequest(name: String, rawArguments: String): ToolConfirmation? {
         val tool = find(name) ?: return null
-        if (!tool.requiresConfirmation) return null
+        if (!tool.requiresConfirmation || demoConsent(name)) return null
         val arguments = try {
             JSONObject(rawArguments)
         } catch (_: JSONException) {
@@ -48,7 +48,7 @@ class ToolRegistry(tools: List<AgentTool>) {
         if (!validArguments(tool, arguments)) {
             return ToolResult.failure("Tool '$name' received invalid parameters.", "INVALID_PARAMETERS")
         }
-        if (tool.requiresConfirmation && !confirmationGranted) {
+        if (tool.requiresConfirmation && !confirmationGranted && !demoConsent(name)) {
             return ToolResult.failure(
                 message = "Tool '$name' requires explicit user confirmation.",
                 errorCode = "CONFIRMATION_REQUIRED",
@@ -115,6 +115,7 @@ class ToolRegistry(tools: List<AgentTool>) {
                 PressNavigationTool(context, "press_back", "back", "Back"),
                 PressNavigationTool(context, "press_home", "home", "Home"),
             ),
+            demoConsent = { com.solappan.agent.DemoAccess(context).permits(it) },
         )
     }
 }

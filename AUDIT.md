@@ -1,5 +1,11 @@
 # Current audit — 2026-09-20
 
+## Demo-access and resilience finish
+
+- Added user-visible, 10-minute demo navigation consent for ordinary screen taps and typing only. The runtime rechecks boot-bound monotonic expiry at execution and Stop/revoke clears it. Sending messages, calls and SMS remain confirmation-gated; passwords, sensitive actions and app locks remain blocked.
+- Replaced the sparkle-style mark with an S monogram and SOL-only display naming. The assistant now surfaces specific Android speech-provider failures, includes a 20-second listening watchdog and provides a Type in SOL fallback.
+- Final debug APK installed and cold-launched on the connected phone. Android verification passed with 42 unit tests, debug/instrumentation APK assembly and lint. A silent eight-second README concept animation was rendered separately; it represents the tool-runtime concept, not device footage.
+
 ## Signed-in phone verification — latest
 
 - Saved encrypted SOL login completed a real phone-side gateway → registered list_apps → model continuation test. The test asserted gateway mode and an empty embedded provider key.
