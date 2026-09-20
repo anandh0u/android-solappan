@@ -10,7 +10,7 @@ Built with Codex, Kotlin, and Android native APIs. The model decides **what shou
 
 [Demo script](DEMO_SCRIPT.md) · [Submission](SUBMISSION.md) · [Audit evidence](AUDIT.md) · [Roadmap / issues](https://github.com/anandh0u/android-solappan/issues)
 
-Current qualification: the signed-in phone completed a real Supabase gateway → registered app-discovery tool → model continuation round trip with no provider key embedded. This is an MVP, not a production-certified release. Cross-app message sending remains experimental and its device qualification is blocked by an unbound accessibility service; see the audit for exact evidence and remaining gates.
+Current qualification: the signed-in phone completed a real Supabase gateway → registered app-discovery tool → model continuation round trip with no provider key embedded. The synthetic on-device message test also passed approval, recipient and duplicate-send checks. This is an MVP, not a production-certified release. Real messaging-app compatibility and delivery remain unverified; see the audit for exact evidence and remaining gates.
 
 ## One goal, multiple actions
 
@@ -93,7 +93,7 @@ Intent acceptance means Android received a request. It does not prove that an al
 
 ## Release status
 
-**Hackathon prototype / technical alpha.** Android has 37 passing unit tests and the gateway has 10 passing local policy/auth tests; debug/instrumentation assembly and lint pass. Hosted gateway smoke tests pass. The user confirmed unlocked Hey SOL invocation. The new send device test is blocked by Android's crashed/unbound SOL Accessibility service; it sent no message. Toggle screen control off/on before retesting. Cross-app, signed-in phone and release qualification remain open; [AUDIT.md](AUDIT.md) records the evidence.
+**Hackathon prototype / technical alpha.** Android has 39 passing unit tests and the gateway has 10 passing local policy/auth tests; debug/instrumentation assembly and lint pass. Hosted gateway smoke tests and a signed-in phone tool round trip passed. The user confirmed unlocked Hey SOL invocation. Synthetic on-device sending passed without contacting anyone; real messaging-app delivery and broader release qualification remain open. [AUDIT.md](AUDIT.md) records the evidence.
 
 Production work includes qualifying signed-in phone workflows, OEM/battery behavior, accessibility action assurance, realtime audio, lifecycle persistence, release/privacy qualification, and selected integrations. These remain tracked in [GitHub issues](https://github.com/anandh0u/android-solappan/issues). CI checks Android compilation/tests/lint, instrumentation-test compilation, release key exclusion and gateway policy/authentication tests. Passing CI is not proof of device or public-release readiness.
 

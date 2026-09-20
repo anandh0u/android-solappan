@@ -5,7 +5,8 @@
 - Saved encrypted SOL login completed a real phone-side gateway → registered list_apps → model continuation test. The test asserted gateway mode and an empty embedded provider key.
 - Account UI no longer labels login as beta; known authentication errors distinguish unverified email from invalid credentials without exposing raw server messages.
 - Android unit tests, debug APK, instrumentation APK and lint build passed after these changes.
-- Synthetic send test remains blocked before observation. Android exit history explicitly records force-stop due to instrumentation; accessibility is subsequently marked crashed. Keeping accessibility enabled in UiAutomation was insufficient. A no-restart retry could not recover the already-unbound service. A user off/on toggle and fresh device test are required; no real message was sent.
+- Synthetic send test PASSED after the user toggled screen control off/on and instrumentation ran with --no-restart. It verified observation, approval-required rejection, generic Send-tap rejection, wrong-recipient rejection, approved synthetic send and duplicate prevention. SOL remained bound afterward with no crashed accessibility services. No external message was sent; real WhatsApp compatibility/delivery remains unverified.
+- Test-harness lesson: ordinary instrumentation force-stops SOL and can leave accessibility unbound. On this API 36 phone use `adb shell am instrument --no-restart -w -e class com.solappan.agent.testing.MessageSendDeviceTest com.solappan.agent.test/androidx.test.runner.AndroidJUnitRunner` with SOL already bound and the test's accessibility-preservation flag. This does not establish behavior on other Android versions.
 - This is a tested gateway-backed MVP, not a completed production release. Existing GitHub release gates remain open.
 
 ## Deployed gateway and dynamic runtime — newest evidence

@@ -4,7 +4,7 @@
 
 - Passed: real phone-side saved-login gateway round trip with registered list_apps and model continuation; no provider key embedded.
 - Fixed: account labels and actionable, sanitized verification/credential errors.
-- Blocked: synthetic message-send device qualification. Instrumentation force-stopped SOL and left accessibility crashed/unbound. User must toggle SOL screen control off/on before a no-restart retry. No external message was sent.
+- Passed after user service toggle and --no-restart instrumentation: synthetic message-send device test, including approval, recipient, generic-tap blocking and duplicate prevention. Accessibility remained bound with no crashed services afterward. No external message was sent. Real WhatsApp delivery and arbitrary-app semantics remain open in #3.
 - Remaining production gates in GitHub #1–#6 are not superseded by this successful gateway test.
 
 ## Deployment and dynamic-runtime update — latest
