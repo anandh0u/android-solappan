@@ -13,13 +13,13 @@ One request connects multiple apps while keeping consequential actions under use
 ## What we built
 
 - One shared agent pipeline for chat, Android system-assistant invocation, and optional Hey SOL.
-- Fourteen device tools: eight native/intent integrations and six optional accessibility tools.
+- Sixteen registered device tools: nine native/intent integrations and seven optional screen-control tools.
 - A persistent assistant panel with spoken replies, follow-up listening, and explicit Close SOL.
 - Three recent text turns of in-memory context for follow-up requests.
 - Offline Vosk wake recognition, Android command recognition/TTS, and GPT-6 Astra reasoning.
-- A strict registry, bounded execution, parameter validation, explicit approval, cancellation, and visible failure results.
+- A strict registry, bounded execution, parameter validation, explicit approval, cancellation, visible failure results and expiring demo navigation consent.
 
-Calls open the dialer and messages open drafts. The user performs the final Call or Send action. Screen observations describe visible state; they do not prove real-world completion.
+Calls open the dialer and messages open drafts. Direct `send_message` remains experimental, always requires approval and does not claim arbitrary-app delivery verification. Screen observations describe visible state; they do not prove real-world completion.
 
 ## Demonstration
 
@@ -28,7 +28,7 @@ Calls open the dialer and messages open drafts. The user performs the final Call
 3. “Prepare a message to Afnan saying I will reach 20 minutes late.”
 4. Ask a follow-up, then say “Close SOL” during listening.
 
-Use the [demo script](DEMO_SCRIPT.md) and the [current audit](AUDIT.md) to select qualified paths. Accessibility tap/type and the replacement wake implementation require fresh physical-device qualification before being presented as verified.
+Use the [demo script](DEMO_SCRIPT.md), [README demo media](README.md#the-experience) and [current audit](AUDIT.md) to select qualified paths. Present the registered native tools as the stable path; do not claim arbitrary-app message delivery, OEM hotword behavior or realtime voice as completed.
 
 ## Product capabilities
 
@@ -43,7 +43,7 @@ Codex was used to build and iteratively debug the Android runtime, integrations,
 
 ## Evidence and limits
 
-The default model passed live text and structured-tool API checks. The combined debug build, 29 unit tests, lint and installation passed. Offline wake startup passed on the phone; human phrase and broader workflow checks remain open in [AUDIT.md](AUDIT.md). Earlier successful demos are historical evidence, not certification of the current build.
+The default model passed live text and structured-tool API checks. The current Android gate has 42 unit tests, debug/instrumentation APK assembly and lint passing; gateway policy/authentication tests also pass. A signed-in phone completed a gateway → registered tool → model continuation round trip, and the synthetic message test verified approval and duplicate prevention without contacting anyone. See [AUDIT.md](AUDIT.md) for exact boundaries.
 
 This is a hackathon technical alpha. Production requires an authenticated model gateway, OEM wake/battery qualification, accessibility assurance, lifecycle/realtime work, and release/privacy hardening. The [GitHub roadmap](https://github.com/anandh0u/android-solappan/issues) tracks that work.
 
