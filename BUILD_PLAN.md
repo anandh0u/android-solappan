@@ -2,9 +2,7 @@
 
 > Historical implementation plan. Later user-authorized voice/accessibility upgrades and the 2026-09-20 audit extend this scope. Current behavior and evidence are in README.md and AUDIT.md; remaining production and stretch work is linked at the top of ISSUES.md. Completed boxes below describe earlier milestones, not release certification.
 
-## Locked Track and MVP
-
-Track: **04 — Next-Gen Productivity & Automation**.
+## Locked MVP
 
 The core MVP is one text-driven agent screen, an OpenAI reasoning loop, a strict Android tool registry, multi-tool execution, visible progress, confirmation for consequential actions, structured failures, and five required Android tools: `open_app`, `open_maps`, `set_alarm`, `find_contact`, and `call_contact`. `prepare_sms` remains preferred after the required path is stable.
 

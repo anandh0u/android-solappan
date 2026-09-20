@@ -2,7 +2,7 @@
 
 ## Purpose
 
-SOL is an Android agent runtime for **Track 04 — Next-Gen Productivity & Automation**. Users express goals through chat or the system assistant. The model chooses registered capabilities; Android validates and executes them.
+SOL is an Android agent runtime. Users express goals through chat or the system assistant. The model chooses registered capabilities; Android validates and executes them.
 
 Current maturity: hackathon technical alpha. See [AUDIT.md](AUDIT.md) for evidence and [GitHub issues](https://github.com/anandh0u/android-solappan/issues) for production work.
 

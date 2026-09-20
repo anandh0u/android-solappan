@@ -8,7 +8,7 @@ Temporary name:
 
 **Solappan — Android Agent Runtime**
 
-Track: **04 — Next-Gen Productivity & Automation**.
+Category: **Android agent runtime**.
 
 ## 2. Problem
 
@@ -28,7 +28,7 @@ The model should not receive unrestricted Android control.
 
 Instead, Android capabilities are exposed as explicit registered tools.
 
-## 3.1 Track 04 Positioning
+## 3.1 Product Positioning
 
 - **Agent:** accepts high-level goals rather than isolated commands.
 - **Automation:** completes multi-step workflows across Android.

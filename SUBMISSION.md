@@ -1,6 +1,6 @@
 # SOL — Agent Runtime for Android
 
-**Track 04 — Next-Gen Productivity & Automation**
+**Android agent runtime**
 
 ## Pitch
 
@@ -30,9 +30,9 @@ Calls open the dialer and messages open drafts. The user performs the final Call
 
 Use the [demo script](DEMO_SCRIPT.md) and the [current audit](AUDIT.md) to select qualified paths. Accessibility tap/type and the replacement wake implementation require fresh physical-device qualification before being presented as verified.
 
-## Why this fits Track 04
+## Product capabilities
 
-| Track theme | SOL implementation |
+| Capability | SOL implementation |
 | --- | --- |
 | Agent | A high-level goal drives iterative tool selection and result interpretation |
 | Automation | Multiple Android actions share one request and execution timeline |
